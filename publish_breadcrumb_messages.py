@@ -37,4 +37,3 @@ def publish_breadcrumbs():
 
 if __name__ == "__main__":
     publish_breadcrumbs()
-

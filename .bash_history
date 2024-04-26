@@ -216,3 +216,25 @@ cd ..
 rm TriMet_Doodle_Datasets/
 rm -r TriMet_Doodle_Datasets/
 ls
+crontab -e
+sudo vim /etc/systemd/system/breadcrumb_receiver.service
+crontab -e
+cat /home/wmm2/cron_output.log
+vim publish_breadcrumb_messages.py 
+vim receive_breadcrumbs.log 
+vim recieve_breadcrumb_messages.py 
+crontab -e
+ls
+vim recieve_breadcrumb_messages.py 
+crontab -e
+vim recieve_breadcrumb_messages.py 
+vim publish_breadcrumb_messages.py 
+vim recieve_breadcrumb_messages.py 
+pic recieve_breadcrumb_messages.py 
+vim recieve_breadcrumb_messages.py 
+crontab -e
+ls -a
+vim topic_clean.py 
+source myenv/bin/activate
+python3 topic_clean.py 
+crontab -e

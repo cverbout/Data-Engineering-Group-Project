@@ -15,9 +15,9 @@
 
 # Command Line History (newest to oldest):
 :wqa
-|2,0,1713536992,,"wqa"
+|2,0,1713825062,,"wqa"
 :qa
-|2,0,1713473232,,"qa"
+|2,0,1713825027,,"qa"
 :wq
 |2,0,1713380009,,"wq"
 
@@ -95,12 +95,62 @@
 |<"        success = False","        attempts = 0","        while not success and attempts < 5:","            url = f\"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}\"","            response = requests.get(url)","            attempts += 1","            if response.status_code == 200:","                all_breadcrumbs[vehicle_id] = response.json()","                print(f\"{index_str} Successfully fetched data for vehicle ID {vehicle_id}\")",>32
 |<"                success = True","            time.sleep(1)","        if not success:","            all_breadcrumbs[vehicle_id] = []","            print(f\"{index_str} Failed to get data after 5 attempts for vehicle ID {vehicle_id}\")"
 ""1	LINE	0
-	    blob = bucket.blob(filename)
-|3,1,1,1,1,0,1713463969,"    blob = bucket.blob(filename)"
+	import requests
+	import pandas as pd
+	from datetime import datetime
+	from google.cloud import pubsub_v1
+	import json
+	import time
+	from tqdm import tqdm
+	import logging
+	
+	# Setup basic logging
+	logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+	
+	def get_vehicle_ids():
+	    doc_key = "10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0"
+	    url = f"https://docs.google.com/spreadsheets/d/{doc_key}/export?format=csv"
+	    response = requests.get(url)
+	    csv_data = response.content
+	    with open("vehicle_ids_sheet.csv", "wb") as file:
+	        file.write(csv_data)
+	    vehicle_ids = pd.read_csv("vehicle_ids_sheet.csv")['Doodle'].tolist()
+	    return vehicle_ids
+	
+	def publish_breadcrumbs():
+	    project_id = "cs510-project1"
+	    topic_id = "cs510-spring24-topic"
+	    publisher = pubsub_v1.PublisherClient()
+	    topic_path = publisher.topic_path(project_id, topic_id)
+	
+	    vehicle_ids = get_vehicle_ids()
+	    total_published = 0
+	
+	    for vehicle_id in tqdm(vehicle_ids, desc="Processing vehicle IDs"):
+	        url = f"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}"
+	        response = requests.get(url)
+	        if response.status_code == 200:
+	            breadcrumbs = response.json()
+	            for breadcrumb in breadcrumbs:
+	                data_str = json.dumps(breadcrumb)
+	                data_bytes = data_str.encode('utf-8')
+	                publisher.publish(topic_path, data_bytes)
+	                total_published += 1
+	        else:
+	            logging.error(f"Failed to fetch data for vehicle ID {vehicle_id}")
+	        time.sleep(1)  # Respectful delay to avoid rate limiting
+	    
+	    logging.info(f"Total breadcrumbs published: {total_published}")
+	
+	if __name__ == "__main__":
+	    publish_breadcrumbs()
+	
+|3,1,1,1,50,0,1713822317,"import requests","import pandas as pd","from datetime import datetime","from google.cloud import pubsub_v1","import json","import time","from tqdm import tqdm","import logging","","# Setup basic logging","logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')","","def get_vehicle_ids():","    doc_key = \"10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0\"",>83
+|<"    url = f\"https://docs.google.com/spreadsheets/d/{doc_key}/export?format=csv\"","    response = requests.get(url)","    csv_data = response.content","    with open(\"vehicle_ids_sheet.csv\", \"wb\") as file:","        file.write(csv_data)","    vehicle_ids = pd.read_csv(\"vehicle_ids_sheet.csv\")['Doodle'].tolist()","    return vehicle_ids","","def publish_breadcrumbs():","    project_id = \"cs510-project1\"","    topic_id = \"cs510-spring24-topic\"",>45
+|<"    publisher = pubsub_v1.PublisherClient()","    topic_path = publisher.topic_path(project_id, topic_id)","","    vehicle_ids = get_vehicle_ids()","    total_published = 0","","    for vehicle_id in tqdm(vehicle_ids, desc=\"Processing vehicle IDs\"):","        url = f\"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}\"","        response = requests.get(url)","        if response.status_code == 200:","            breadcrumbs = response.json()",>44
+|<"            for breadcrumb in breadcrumbs:","                data_str = json.dumps(breadcrumb)","                data_bytes = data_str.encode('utf-8')","                publisher.publish(topic_path, data_bytes)","                total_published += 1","        else:","            logging.error(f\"Failed to fetch data for vehicle ID {vehicle_id}\")","        time.sleep(1)  # Respectful delay to avoid rate limiting","    ",>71
+|<"    logging.info(f\"Total breadcrumbs published: {total_published}\")","","if __name__ == \"__main__\":","    publish_breadcrumbs()",""
 "2	LINE	0
-	        print(f"{instance_id}: Processed {len(messages)} messages.")
-|3,0,2,1,1,0,1713463847,"        print(f\"{instance_id}: Processed {len(messages)} messages.\")"
-"3	LINE	0
 	import google.cloud.pubsub_v1 as pubsub_v1
 	from google.cloud import storage
 	import json
@@ -108,10 +158,83 @@
 	from google.cloud.logging.handlers import CloudLoggingHandler
 	import logging
 	import sys
-	
+	from datetime import datetime
 	
 	# Inline argument which gives receiver a title for logging
-	instance_id = sys.argv[1] if len(sys.argv) > 1 else "Default Receiver"
+	instance_id = sys.argv[1] if len(sys.argv) > 1 else "CronJob Receiver"
+	
+	project_id = "cs510-project1"
+	subscription_id = "cs510-spring24-sub"
+	subscriber = pubsub_v1.SubscriberClient()
+	subscription_path = subscriber.subscription_path(project_id, subscription_id)
+	
+	# Setup logging
+	client = google.cloud.logging.Client()
+	handler = CloudLoggingHandler(client)
+	cloud_logger = logging.getLogger('cloudLogger')
+	cloud_logger.setLevel(logging.INFO)
+	cloud_logger.addHandler(handler)
+	
+	# Temporary storage for messages
+	messages = []
+	
+	# Prepare storage client
+	storage_client = storage.Client()
+	bucket = storage_client.bucket('cs510-spring24-project1-bucket')
+	
+	def callback(message):
+	    message_data = json.loads(message.data.decode('utf-8'))
+	    messages.append(message_data)
+	    message.ack()
+	    if len(messages) % 10000 == 0:
+	        print(f"{instance_id}: Processed {len(messages)} messages.", end='\r', flush=True)
+	
+	
+	def process_messages(messages):
+	    if messages:
+	        cloud_logger.info(f"Processing {len(messages)} messages")
+	        # Processing logic here
+	        cloud_logger.info("All messages processed and saved.")
+	    else:
+	        cloud_logger.info("No new messages to process.")
+	
+	
+	def sort_and_store_messages():
+	    if not messages:
+|3,0,2,1,50,0,1713822185,"import google.cloud.pubsub_v1 as pubsub_v1","from google.cloud import storage","import json","import google.cloud.logging","from google.cloud.logging.handlers import CloudLoggingHandler","import logging","import sys","from datetime import datetime","","# Inline argument which gives receiver a title for logging","instance_id = sys.argv[1] if len(sys.argv) > 1 else \"CronJob Receiver\"","","project_id = \"cs510-project1\"",>42
+|<"subscription_id = \"cs510-spring24-sub\"","subscriber = pubsub_v1.SubscriberClient()","subscription_path = subscriber.subscription_path(project_id, subscription_id)","","# Setup logging","client = google.cloud.logging.Client()","handler = CloudLoggingHandler(client)","cloud_logger = logging.getLogger('cloudLogger')","cloud_logger.setLevel(logging.INFO)","cloud_logger.addHandler(handler)","","# Temporary storage for messages","messages = []","","# Prepare storage client",>35
+|<"storage_client = storage.Client()","bucket = storage_client.bucket('cs510-spring24-project1-bucket')","","def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()","    if len(messages) % 10000 == 0:","        print(f\"{instance_id}: Processed {len(messages)} messages.\", end='\\r', flush=True)","","","def process_messages(messages):","    if messages:",>69
+|<"        cloud_logger.info(f\"Processing {len(messages)} messages\")","        # Processing logic here","        cloud_logger.info(\"All messages processed and saved.\")","    else:","        cloud_logger.info(\"No new messages to process.\")","","","def sort_and_store_messages():","    if not messages:"
+"3	LINE	0
+	
+|3,0,3,1,1,0,1713822141,""
+"4	LINE	0
+	
+|3,0,4,1,1,0,1713821528,""
+"5	LINE	0
+	def callback(message):
+	    message_data = json.loads(message.data.decode('utf-8'))
+	    messages.append(message_data)
+	    message.ack()
+|3,0,5,1,4,0,1713820797,"def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()"
+"6	LINE	0
+	def callback(message):
+	    message_data = json.loads(message.data.decode('utf-8'))
+	    messages.append(message_data)
+	    message.ack()
+|3,0,6,1,4,0,1713820797,"def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()"
+"7	LINE	0
+	import google.cloud.pubsub_v1 as pubsub_v1
+	from google.cloud import storage
+	import json
+	import google.cloud.logging
+	from google.cloud.logging.handlers import CloudLoggingHandler
+	import logging
+	import sys
+	from datetime import datetime
+	
+	# Inline argument which gives receiver a title for logging
+	instance_id = sys.argv[1] if len(sys.argv) > 1 else "CronJob Receiver"
 	
 	project_id = "cs510-project1"
 	subscription_id = "cs510-spring24-sub"
@@ -137,7 +260,8 @@
 	    message.ack()  # Acknowledge the message
 	    
 	    if len(messages) % 1000 == 0:
-	        print(f"{instance_id}: Processed {len(messages)} messages.")
+	        print(f"{instance_id}: Processed {len(messages)} messages.", end='\r', flush=True)
+	
 	
 	def sort_and_store_messages():
 	    if not messages:
@@ -150,321 +274,301 @@
 	        vehicle_id = message['VEHICLE_ID']
 	        if vehicle_id not in grouped_messages:
 	            grouped_messages[vehicle_id] = []
-	        grouped_messages[vehicle_id].append(message)
-|3,0,3,1,50,0,1713398835,"import google.cloud.pubsub_v1 as pubsub_v1","from google.cloud import storage","import json","import google.cloud.logging","from google.cloud.logging.handlers import CloudLoggingHandler","import logging","import sys","","","# Inline argument which gives receiver a title for logging","instance_id = sys.argv[1] if len(sys.argv) > 1 else \"Default Receiver\"","","project_id = \"cs510-project1\"",>42
+|3,0,7,1,50,0,1713808494,"import google.cloud.pubsub_v1 as pubsub_v1","from google.cloud import storage","import json","import google.cloud.logging","from google.cloud.logging.handlers import CloudLoggingHandler","import logging","import sys","from datetime import datetime","","# Inline argument which gives receiver a title for logging","instance_id = sys.argv[1] if len(sys.argv) > 1 else \"CronJob Receiver\"","","project_id = \"cs510-project1\"",>42
 |<"subscription_id = \"cs510-spring24-sub\"","subscriber = pubsub_v1.SubscriberClient()","subscription_path = subscriber.subscription_path(project_id, subscription_id)","","client = google.cloud.logging.Client()","handler = CloudLoggingHandler(client)","cloud_logger = logging.getLogger('cloudLogger')","cloud_logger.setLevel(logging.INFO)","cloud_logger.addHandler(handler)","","# Prepare storage client","storage_client = storage.Client()",>66
-|<"bucket = storage_client.bucket('cs510-spring24-project1-bucket')","","# Temporary storage for messages","messages = []","","def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()  # Acknowledge the message","    ","    if len(messages) % 1000 == 0:","        print(f\"{instance_id}: Processed {len(messages)} messages.\")","","def sort_and_store_messages():","    if not messages:",>56
-|<"        cloud_logger.info(\"No messages to process.\")","        return","","    # Group messages by 'VEHICLE_ID'","    grouped_messages = {}","    for message in messages:","        vehicle_id = message['VEHICLE_ID']","        if vehicle_id not in grouped_messages:","            grouped_messages[vehicle_id] = []","        grouped_messages[vehicle_id].append(message)"
-"4	LINE	0
-	
-|3,0,4,1,1,0,1713392452,""
-"5	LINE	0
-	def sort_and_store_messages():
-	    if not messages:
-	        cloud_logger.info("No messages to process.")
-	        return
-	    
-	    # Sort messages by 'ACT_TIME'
-	    sorted_messages = sorted(messages, key=lambda x: x['ACT_TIME'])
-	
-	    # Group messages by 'VEHICLE_ID'
-	    grouped_messages = {}
-	    for message in sorted_messages:
-	        vehicle_id = message['VEHICLE_ID']
-	        if vehicle_id not in grouped_messages:
-	            grouped_messages[vehicle_id] = []
-	        grouped_messages[vehicle_id].append(message)
-	
-	    grouped_messages = dict(sorted(grouped_messages.items()))
-	
-	    # Save all messages as a single JSON object indexed by 'VEHICLE_ID'
-	    blob = bucket.blob('data_via_topic/all_messages_by_vehicle.json')
-	    blob.upload_from_string(json.dumps(grouped_messages), content_type='application/json')
-	    cloud_logger.info(f"All messages processed and saved to GCS. Total vehicles processed: {len(grouped_messages)}.")
-|3,0,5,1,22,0,1713392362,"def sort_and_store_messages():","    if not messages:","        cloud_logger.info(\"No messages to process.\")","        return","    ","    # Sort messages by 'ACT_TIME'","    sorted_messages = sorted(messages, key=lambda x: x['ACT_TIME'])","","    # Group messages by 'VEHICLE_ID'","    grouped_messages = {}","    for message in sorted_messages:","        vehicle_id = message['VEHICLE_ID']",>48
-|<"        if vehicle_id not in grouped_messages:","            grouped_messages[vehicle_id] = []","        grouped_messages[vehicle_id].append(message)","","    grouped_messages = dict(sorted(grouped_messages.items()))","","    # Save all messages as a single JSON object indexed by 'VEHICLE_ID'","    blob = bucket.blob('data_via_topic/all_messages_by_vehicle.json')","    blob.upload_from_string(json.dumps(grouped_messages), content_type='application/json')",>121
-|<"    cloud_logger.info(f\"All messages processed and saved to GCS. Total vehicles processed: {len(grouped_messages)}.\")"
-"6	LINE	0
-	
-|3,0,6,1,1,0,1713392347,""
-"7	LINE	0
-	def sort_and_store_messages():
-	    if not messages:
-	        cloud_logger.info("No messages to process.")
-	        return
-	    
-	    # Sort messages by 'ACT_TIME'
-	    sorted_messages = sorted(messages, key=lambda x: x['ACT_TIME'])
-	
-	    # Group messages by 'VEHICLE_ID'
-	    grouped_messages = {}
-	    for message in sorted_messages:
-	        vehicle_id = message['VEHICLE_ID']
-	        if vehicle_id not in grouped_messages:
-	            grouped_messages[vehicle_id] = []
-	        grouped_messages[vehicle_id].append(message)
-	
-	    grouped_messages = dict(sorted(grouped_messages.items()))
-	
-	    # Save all messages as a single JSON object indexed by 'VEHICLE_ID'
-	    blob = bucket.blob('data_via_topic/all_messages_by_vehicle.json')
-	    blob.upload_from_string(json.dumps(grouped_messages), content_type='application/json')
-	    cloud_logger.info(f"All messages processed and saved to GCS. Total vehicles processed: {len(grouped_messages)}.")
-|3,0,7,1,22,0,1713392341,"def sort_and_store_messages():","    if not messages:","        cloud_logger.info(\"No messages to process.\")","        return","    ","    # Sort messages by 'ACT_TIME'","    sorted_messages = sorted(messages, key=lambda x: x['ACT_TIME'])","","    # Group messages by 'VEHICLE_ID'","    grouped_messages = {}","    for message in sorted_messages:","        vehicle_id = message['VEHICLE_ID']",>48
-|<"        if vehicle_id not in grouped_messages:","            grouped_messages[vehicle_id] = []","        grouped_messages[vehicle_id].append(message)","","    grouped_messages = dict(sorted(grouped_messages.items()))","","    # Save all messages as a single JSON object indexed by 'VEHICLE_ID'","    blob = bucket.blob('data_via_topic/all_messages_by_vehicle.json')","    blob.upload_from_string(json.dumps(grouped_messages), content_type='application/json')",>121
-|<"    cloud_logger.info(f\"All messages processed and saved to GCS. Total vehicles processed: {len(grouped_messages)}.\")"
+|<"bucket = storage_client.bucket('cs510-spring24-project1-bucket')","","# Temporary storage for messages","messages = []","","def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()  # Acknowledge the message","    ","    if len(messages) % 1000 == 0:","        print(f\"{instance_id}: Processed {len(messages)} messages.\", end='\\r', flush=True)","","","def sort_and_store_messages():",>22
+|<"    if not messages:","        cloud_logger.info(\"No messages to process.\")","        return","","    # Group messages by 'VEHICLE_ID'","    grouped_messages = {}","    for message in messages:","        vehicle_id = message['VEHICLE_ID']","        if vehicle_id not in grouped_messages:","            grouped_messages[vehicle_id] = []"
 "8	LINE	0
+	import requests
+	import pandas as pd
+	from datetime import datetime
+	from google.cloud import pubsub_v1
+	import json
+	import time
+	from tqdm import tqdm
 	
-|3,0,8,1,1,0,1713391982,""
+	def get_vehicle_ids():
+	    doc_key = "10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0"
+	    url = f"https://docs.google.com/spreadsheets/d/{doc_key}/export?format=csv"
+	    response = requests.get(url)
+	    csv_data = response.content
+	    with open("vehicle_ids_sheet.csv", "wb") as file:
+	        file.write(csv_data)
+	    vehicle_ids = pd.read_csv("vehicle_ids_sheet.csv")['Doodle'].tolist()
+	    return vehicle_ids
+	
+	def publish_breadcrumbs():
+	    project_id = "cs510-project1"
+	    topic_id = "cs510-spring24-topic"
+	    publisher = pubsub_v1.PublisherClient()
+	    topic_path = publisher.topic_path(project_id, topic_id)
+	
+	    vehicle_ids = get_vehicle_ids()
+	
+	    for vehicle_id in tqdm(vehicle_ids, desc="Processing vehicle IDs"):
+	        url = f"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}"
+	        response = requests.get(url)
+	        if response.status_code == 200:
+	            breadcrumbs = response.json()
+	            for breadcrumb in breadcrumbs:
+	                data_str = json.dumps(breadcrumb)
+	                data_bytes = data_str.encode('utf-8')
+	                publisher.publish(topic_path, data_bytes)
+	        time.sleep(1)  # Respectful delay to avoid rate limiting
+	
+	if __name__ == "__main__":
+	    publish_breadcrumbs()
+	
+|3,0,8,1,40,0,1713808463,"import requests","import pandas as pd","from datetime import datetime","from google.cloud import pubsub_v1","import json","import time","from tqdm import tqdm","","def get_vehicle_ids():","    doc_key = \"10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0\"","    url = f\"https://docs.google.com/spreadsheets/d/{doc_key}/export?format=csv\"","    response = requests.get(url)","    csv_data = response.content",>59
+|<"    with open(\"vehicle_ids_sheet.csv\", \"wb\") as file:","        file.write(csv_data)","    vehicle_ids = pd.read_csv(\"vehicle_ids_sheet.csv\")['Doodle'].tolist()","    return vehicle_ids","","def publish_breadcrumbs():","    project_id = \"cs510-project1\"","    topic_id = \"cs510-spring24-topic\"","    publisher = pubsub_v1.PublisherClient()","    topic_path = publisher.topic_path(project_id, topic_id)","","    vehicle_ids = get_vehicle_ids()","",>75
+|<"    for vehicle_id in tqdm(vehicle_ids, desc=\"Processing vehicle IDs\"):","        url = f\"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}\"","        response = requests.get(url)","        if response.status_code == 200:","            breadcrumbs = response.json()","            for breadcrumb in breadcrumbs:","                data_str = json.dumps(breadcrumb)","                data_bytes = data_str.encode('utf-8')",>59
+|<"                publisher.publish(topic_path, data_bytes)","        time.sleep(1)  # Respectful delay to avoid rate limiting","","if __name__ == \"__main__\":","    publish_breadcrumbs()",""
 "9	LINE	0
-	
-|3,0,9,1,1,0,1713391939,""
+	    blob = bucket.blob(filename)
+|3,0,9,1,1,0,1713463969,"    blob = bucket.blob(filename)"
 "-	CHAR	0
 	'cs510-project1-6c1b06b5846a.json'
 |3,0,36,0,1,0,1713289532,"'cs510-project1-6c1b06b5846a.json'"
 
 # File marks:
-'0  17  0  ~/.gitignore
-|4,48,17,0,1713536992,"~/.gitignore"
-'1  838  0  ~/cron_output.log
-|4,49,838,0,1713473232,"~/cron_output.log"
-'2  66  4  ~/recieve_breadcrumb_messages.py
-|4,50,66,4,1713463974,"~/recieve_breadcrumb_messages.py"
-'3  37  8  ~/recieve_breadcrumb_messages.py
-|4,51,37,8,1713463848,"~/recieve_breadcrumb_messages.py"
-'4  37  8  ~/recieve_breadcrumb_messages.py
-|4,52,37,8,1713463848,"~/recieve_breadcrumb_messages.py"
-'5  11  59  ~/recieve_breadcrumb_messages.py
-|4,53,11,59,1713399111,"~/recieve_breadcrumb_messages.py"
-'6  11  59  ~/recieve_breadcrumb_messages.py
-|4,54,11,59,1713399111,"~/recieve_breadcrumb_messages.py"
-'7  11  59  ~/recieve_breadcrumb_messages.py
-|4,55,11,59,1713399111,"~/recieve_breadcrumb_messages.py"
-'8  11  59  ~/recieve_breadcrumb_messages.py
-|4,56,11,59,1713399111,"~/recieve_breadcrumb_messages.py"
-'9  57  0  ~/recieve_breadcrumb_messages.py
-|4,57,57,0,1713398856,"~/recieve_breadcrumb_messages.py"
+'0  4  36  ~/topic_clean.py
+|4,48,4,36,1713825062,"~/topic_clean.py"
+'1  18  28  ~/topic_clean.py
+|4,49,18,28,1713825027,"~/topic_clean.py"
+'2  18  28  ~/topic_clean.py
+|4,50,18,28,1713825027,"~/topic_clean.py"
+'3  42  8  ~/recieve_breadcrumb_messages.py
+|4,51,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
+'4  80  28  ~/recieve_breadcrumb_messages.py
+|4,52,80,28,1713822643,"~/recieve_breadcrumb_messages.py"
+'5  79  28  ~/recieve_breadcrumb_messages.py
+|4,53,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
+'6  24  0  ~/publish_breadcrumb_messages.py
+|4,54,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+'7  80  4  ~/recieve_breadcrumb_messages.py
+|4,55,80,4,1713822288,"~/recieve_breadcrumb_messages.py"
+'8  79  4  ~/recieve_breadcrumb_messages.py
+|4,56,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
+'9  1  49  ~/recieve_breadcrumb_messages.py
+|4,57,1,49,1713821685,"~/recieve_breadcrumb_messages.py"
 
 # Jumplist (newest first):
--'  17  0  ~/.gitignore
-|4,39,17,0,1713536992,"~/.gitignore"
--'  1  0  ~/.gitignore
-|4,39,1,0,1713536976,"~/.gitignore"
--'  838  0  ~/cron_output.log
-|4,39,838,0,1713473232,"~/cron_output.log"
--'  838  0  ~/cron_output.log
-|4,39,838,0,1713473232,"~/cron_output.log"
--'  98  0  ~/cron_output.log
-|4,39,98,0,1713473174,"~/cron_output.log"
--'  98  0  ~/cron_output.log
-|4,39,98,0,1713473174,"~/cron_output.log"
--'  7  0  ~/cron_output.log
-|4,39,7,0,1713473168,"~/cron_output.log"
--'  7  0  ~/cron_output.log
-|4,39,7,0,1713473168,"~/cron_output.log"
--'  66  4  ~/recieve_breadcrumb_messages.py
-|4,39,66,4,1713463974,"~/recieve_breadcrumb_messages.py"
--'  66  4  ~/recieve_breadcrumb_messages.py
-|4,39,66,4,1713463974,"~/recieve_breadcrumb_messages.py"
--'  66  4  ~/recieve_breadcrumb_messages.py
-|4,39,66,4,1713463974,"~/recieve_breadcrumb_messages.py"
--'  66  4  ~/recieve_breadcrumb_messages.py
-|4,39,66,4,1713463974,"~/recieve_breadcrumb_messages.py"
--'  37  8  ~/recieve_breadcrumb_messages.py
-|4,39,37,8,1713463884,"~/recieve_breadcrumb_messages.py"
--'  37  8  ~/recieve_breadcrumb_messages.py
-|4,39,37,8,1713463884,"~/recieve_breadcrumb_messages.py"
--'  37  8  ~/recieve_breadcrumb_messages.py
-|4,39,37,8,1713463884,"~/recieve_breadcrumb_messages.py"
--'  37  8  ~/recieve_breadcrumb_messages.py
-|4,39,37,8,1713463884,"~/recieve_breadcrumb_messages.py"
--'  37  8  ~/recieve_breadcrumb_messages.py
-|4,39,37,8,1713463848,"~/recieve_breadcrumb_messages.py"
--'  37  8  ~/recieve_breadcrumb_messages.py
-|4,39,37,8,1713463848,"~/recieve_breadcrumb_messages.py"
--'  37  8  ~/recieve_breadcrumb_messages.py
-|4,39,37,8,1713463848,"~/recieve_breadcrumb_messages.py"
--'  37  8  ~/recieve_breadcrumb_messages.py
-|4,39,37,8,1713463848,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713463836,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713463836,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713463836,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713463836,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713463836,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713463836,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713463836,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713463836,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713399111,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713399111,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713399111,"~/recieve_breadcrumb_messages.py"
--'  11  59  ~/recieve_breadcrumb_messages.py
-|4,39,11,59,1713399111,"~/recieve_breadcrumb_messages.py"
--'  55  0  ~/recieve_breadcrumb_messages.py
-|4,39,55,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  54  0  ~/recieve_breadcrumb_messages.py
-|4,39,54,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  55  0  ~/recieve_breadcrumb_messages.py
-|4,39,55,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  54  0  ~/recieve_breadcrumb_messages.py
-|4,39,54,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  55  0  ~/recieve_breadcrumb_messages.py
-|4,39,55,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  54  0  ~/recieve_breadcrumb_messages.py
-|4,39,54,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  55  0  ~/recieve_breadcrumb_messages.py
-|4,39,55,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  54  0  ~/recieve_breadcrumb_messages.py
-|4,39,54,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  55  0  ~/recieve_breadcrumb_messages.py
-|4,39,55,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  54  0  ~/recieve_breadcrumb_messages.py
-|4,39,54,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  55  0  ~/recieve_breadcrumb_messages.py
-|4,39,55,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  54  0  ~/recieve_breadcrumb_messages.py
-|4,39,54,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  55  0  ~/recieve_breadcrumb_messages.py
-|4,39,55,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  54  0  ~/recieve_breadcrumb_messages.py
-|4,39,54,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  55  0  ~/recieve_breadcrumb_messages.py
-|4,39,55,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  54  0  ~/recieve_breadcrumb_messages.py
-|4,39,54,0,1713399100,"~/recieve_breadcrumb_messages.py"
--'  57  0  ~/recieve_breadcrumb_messages.py
-|4,39,57,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  57  0  ~/recieve_breadcrumb_messages.py
-|4,39,57,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  57  0  ~/recieve_breadcrumb_messages.py
-|4,39,57,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  57  0  ~/recieve_breadcrumb_messages.py
-|4,39,57,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  57  0  ~/recieve_breadcrumb_messages.py
-|4,39,57,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  57  0  ~/recieve_breadcrumb_messages.py
-|4,39,57,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  57  0  ~/recieve_breadcrumb_messages.py
-|4,39,57,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  57  0  ~/recieve_breadcrumb_messages.py
-|4,39,57,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713399098,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713398856,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713398856,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713398856,"~/recieve_breadcrumb_messages.py"
--'  56  0  ~/recieve_breadcrumb_messages.py
-|4,39,56,0,1713398856,"~/recieve_breadcrumb_messages.py"
--'  78  0  ~/recieve_breadcrumb_messages.py
-|4,39,78,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  77  0  ~/recieve_breadcrumb_messages.py
-|4,39,77,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  77  0  ~/recieve_breadcrumb_messages.py
-|4,39,77,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  76  0  ~/recieve_breadcrumb_messages.py
-|4,39,76,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  76  0  ~/recieve_breadcrumb_messages.py
-|4,39,76,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  78  0  ~/recieve_breadcrumb_messages.py
-|4,39,78,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  77  0  ~/recieve_breadcrumb_messages.py
-|4,39,77,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  77  0  ~/recieve_breadcrumb_messages.py
-|4,39,77,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  76  0  ~/recieve_breadcrumb_messages.py
-|4,39,76,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  76  0  ~/recieve_breadcrumb_messages.py
-|4,39,76,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  78  0  ~/recieve_breadcrumb_messages.py
-|4,39,78,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  77  0  ~/recieve_breadcrumb_messages.py
-|4,39,77,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  77  0  ~/recieve_breadcrumb_messages.py
-|4,39,77,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  76  0  ~/recieve_breadcrumb_messages.py
-|4,39,76,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  76  0  ~/recieve_breadcrumb_messages.py
-|4,39,76,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  78  0  ~/recieve_breadcrumb_messages.py
-|4,39,78,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  77  0  ~/recieve_breadcrumb_messages.py
-|4,39,77,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  77  0  ~/recieve_breadcrumb_messages.py
-|4,39,77,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  76  0  ~/recieve_breadcrumb_messages.py
-|4,39,76,0,1713398839,"~/recieve_breadcrumb_messages.py"
--'  76  0  ~/recieve_breadcrumb_messages.py
-|4,39,76,0,1713398839,"~/recieve_breadcrumb_messages.py"
+-'  4  36  ~/topic_clean.py
+|4,39,4,36,1713825062,"~/topic_clean.py"
+-'  18  28  ~/topic_clean.py
+|4,39,18,28,1713825036,"~/topic_clean.py"
+-'  18  28  ~/topic_clean.py
+|4,39,18,28,1713825027,"~/topic_clean.py"
+-'  19  85  ~/topic_clean.py
+|4,39,19,85,1713824951,"~/topic_clean.py"
+-'  19  85  ~/topic_clean.py
+|4,39,19,85,1713824951,"~/topic_clean.py"
+-'  42  8  ~/recieve_breadcrumb_messages.py
+|4,39,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
+-'  42  8  ~/recieve_breadcrumb_messages.py
+|4,39,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
+-'  42  8  ~/recieve_breadcrumb_messages.py
+|4,39,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
+-'  42  8  ~/recieve_breadcrumb_messages.py
+|4,39,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
+-'  80  28  ~/recieve_breadcrumb_messages.py
+|4,39,80,28,1713823242,"~/recieve_breadcrumb_messages.py"
+-'  80  28  ~/recieve_breadcrumb_messages.py
+|4,39,80,28,1713823242,"~/recieve_breadcrumb_messages.py"
+-'  80  28  ~/recieve_breadcrumb_messages.py
+|4,39,80,28,1713823242,"~/recieve_breadcrumb_messages.py"
+-'  80  28  ~/recieve_breadcrumb_messages.py
+|4,39,80,28,1713823242,"~/recieve_breadcrumb_messages.py"
+-'  79  28  ~/recieve_breadcrumb_messages.py
+|4,39,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
+-'  79  28  ~/recieve_breadcrumb_messages.py
+|4,39,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
+-'  79  28  ~/recieve_breadcrumb_messages.py
+|4,39,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
+-'  79  28  ~/recieve_breadcrumb_messages.py
+|4,39,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  24  0  ~/publish_breadcrumb_messages.py
+|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  1  0  ~/publish_breadcrumb_messages.py
+|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
+-'  79  4  ~/recieve_breadcrumb_messages.py
+|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
+-'  79  4  ~/recieve_breadcrumb_messages.py
+|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
+-'  79  4  ~/recieve_breadcrumb_messages.py
+|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
+-'  79  4  ~/recieve_breadcrumb_messages.py
+|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
+-'  79  4  ~/recieve_breadcrumb_messages.py
+|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
+-'  79  4  ~/recieve_breadcrumb_messages.py
+|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
+-'  79  4  ~/recieve_breadcrumb_messages.py
+|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
+-'  79  4  ~/recieve_breadcrumb_messages.py
+|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
 -'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713398834,"~/recieve_breadcrumb_messages.py"
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
+-'  1  0  ~/recieve_breadcrumb_messages.py
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
+-'  1  0  ~/recieve_breadcrumb_messages.py
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
+-'  1  0  ~/recieve_breadcrumb_messages.py
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
+-'  1  0  ~/recieve_breadcrumb_messages.py
+|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
+-'  50  49  ~/recieve_breadcrumb_messages.py
+|4,39,50,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  50  49  ~/recieve_breadcrumb_messages.py
+|4,39,50,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  50  49  ~/recieve_breadcrumb_messages.py
+|4,39,50,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  50  49  ~/recieve_breadcrumb_messages.py
+|4,39,50,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  49  49  ~/recieve_breadcrumb_messages.py
+|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  37  89  ~/recieve_breadcrumb_messages.py
+|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
 
 # History of marks within files (newest to oldest):
 
-> ~/.gitignore
-	*	1713536988	0
-	"	17	0
-	^	17	0
-	.	16	6
-	+	16	6
-
-> ~/cron_output.log
-	*	1713473229	0
-	"	838	0
+> ~/topic_clean.py
+	*	1713825062	0
+	"	4	36
+	^	4	37
+	.	4	37
+	+	19	85
+	+	4	37
 
 > ~/recieve_breadcrumb_messages.py
-	*	1713463973	0
-	"	66	4
-	^	66	51
-	.	66	0
+	*	1713823646	0
+	"	42	8
+	^	42	9
+	.	42	8
 	+	1	0
 	+	1	5
 	+	1	27
@@ -497,12 +601,57 @@
 	+	1	0
 	+	1	43
 	+	1	42
-	+	77	29
-	+	11	59
-	+	37	98
-	+	37	0
-	+	63	32
-	+	66	0
+	+	1	29
+	+	1	59
+	+	1	98
+	+	1	0
+	+	1	32
+	+	1	42
+	+	1	83
+	+	1	58
+	+	1	76
+	+	1	63
+	+	1	12
+	+	1	90
+	+	1	0
+	+	1	89
+	+	1	26
+	+	1	0
+	+	1	145
+	+	1	28
+	+	1	0
+	+	1	42
+	+	80	28
+	+	71	0
+	+	43	52
+	+	42	8
+
+> ~/publish_breadcrumb_messages.py
+	*	1713822344	0
+	"	24	0
+	^	39	25
+	.	39	24
+	+	1	76
+	+	1	22
+	+	1	15
+	+	1	25
+	+	1	15
+	+	39	24
+
+> ~/receive_breadcrumbs.log
+	*	1713808473	0
+	"	1	0
+
+> ~/.gitignore
+	*	1713536988	0
+	"	17	0
+	^	17	0
+	.	16	6
+	+	16	6
+
+> ~/cron_output.log
+	*	1713473229	0
+	"	838	0
 
 > ~/project1_data_collection.py
 	*	1713398663	0
@@ -540,24 +689,6 @@
 > ~/contab
 	*	1713389780	0
 	"	1	0
-
-> ~/publish_breadcrumb_messages.py
-	*	1713389722	0
-	"	5	0
-	^	40	0
-	.	36	0
-	+	1	76
-	+	1	22
-	+	1	15
-	+	39	25
-	+	36	0
-
-> ~/topic_clean.py
-	*	1713382805	0
-	"	19	85
-	^	19	86
-	.	19	85
-	+	19	85
 
 > /tmp/crontab.q8DEVN/crontab
 	*	1712984424	0

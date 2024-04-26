@@ -1,7 +1,7 @@
 from google.cloud import pubsub_v1
 
 project_id = "cs510-project1"
-subscription_id = "my-sub"
+subscription_id = "cs510-spring24-sub"
 
 subscriber = pubsub_v1.SubscriberClient()
 subscription_path = subscriber.subscription_path(project_id, subscription_id)

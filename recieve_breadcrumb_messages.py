@@ -39,7 +39,8 @@ def callback(message):
 
 def sort_and_store_messages():
     if not messages:
-        cloud_logger.info("No messages to process.")
+        #cloud_logger.info("No messages to process.")
+        cloud_logger.debug("No messages to process.")
         return
 
     # Group messages by 'VEHICLE_ID'
@@ -67,6 +68,8 @@ def sort_and_store_messages():
     blob.upload_from_string(json.dumps(sorted_grouped_messages), content_type='application/json')
     cloud_logger.info(f"All messages processed and saved to GCS. Filename: {filename}, Total vehicles processed: {len(sorted_grouped_messages)}.")
 
+
+
 streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
 print(f"Listening for messages on {subscription_path}..")
 
@@ -75,4 +78,3 @@ try:
 except TimeoutError:
     streaming_pull_future.cancel()
     sort_and_store_messages()
-
