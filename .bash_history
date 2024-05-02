@@ -238,3 +238,33 @@ vim topic_clean.py
 source myenv/bin/activate
 python3 topic_clean.py 
 crontab -e
+ls -a
+rm * .swp
+ls -a
+ls
+git fetch --all
+git reset --hard origin/main
+ls 
+git fetch --all
+git reset --hard origin/master
+ls
+crontab -e
+vim database_uploader.py
+python3 database_uploader.py 
+source myenv/bin/activate
+sudo apt update
+sudo apt -y install postgresql postgresql-client postgresql-contrib
+python3 database_uploader.py 
+vim database_uploader.py 
+cp database_uploader.py from_messages_to_database.py
+rm database_uploader.py 
+ls
+vim testing_breadcrumb_table.py 
+python3 testing_breadcrumb_table.py 
+vim from_bucket_to_database.py
+ls
+vim from_messages_to_database.py 
+cp from_messages_to_database.py database_uploader.py
+rm from_messages_to_database.py 
+ls
+vim from_bucket_to_database.py 
