@@ -1,15 +1,23 @@
 import psycopg2
 from psycopg2 import extras
+from psycopg2 import pool
 from datetime import datetime
 
+# Initialize the connection pool
+connection_pool = psycopg2.pool.SimpleConnectionPool(
+    1, 10,
+    dbname="project-DB",
+    user="will",
+    password="karlasgremlins",
+    host="34.145.104.158",
+    sslmode="require"
+)
+
 def connect_db():
-    return psycopg2.connect(
-        dbname="project-DB",
-        user="will",
-        password="karlasgremlins",  # Replace with your actual password
-        host="34.145.104.158",    # Use the IP of your Cloud SQL instance
-        sslmode="require"         # Use SSL mode for security
-    )
+    return connection_pool.getconn()
+
+def close_db(conn):
+    connection_pool.putconn(conn)
 
 def ensure_trip_exists(trip_id, vehicle_id):
     conn = connect_db()
@@ -27,18 +35,19 @@ def ensure_trip_exists(trip_id, vehicle_id):
     except psycopg2.Error as e:
         print(f"Error checking/inserting trip: {e}")
     finally:
-        conn.close()
+        close_db(conn)
 
 def parse_date(opd_date):
     # Example format '29DEC2022:00:00:00'
     return datetime.strptime(opd_date, '%d%b%Y:%H:%M:%S')
-
 
 def insert_breadcrumb(events):
     """Insert multiple breadcrumb records from a list of event dictionaries."""
     conn = connect_db()
     try:
         with conn.cursor() as cursor:
+            # Prepare data for bulk insertion
+            records = []
             for event in events:
                 trip_id = event['EVENT_NO_TRIP']
                 vehicle_id = event['VEHICLE_ID']
@@ -50,14 +59,18 @@ def insert_breadcrumb(events):
                 # Ensure the trip exists before inserting breadcrumb
                 ensure_trip_exists(trip_id, vehicle_id)
 
+                records.append((tstamp, latitude, longitude, speed, trip_id))
+
+            # Insert all records at once if records are not empty
+            if records:
                 query = """
                 INSERT INTO breadcrumb (tstamp, latitude, longitude, speed, trip_id)
-                VALUES (%s, %s, %s, %s, %s)
+                VALUES %s
                 """
-                cursor.execute(query, (tstamp, latitude, longitude, speed, trip_id))
-            conn.commit()
+                extras.execute_values(cursor, query, records)
+                conn.commit()
     except psycopg2.Error as e:
         print(f"Database error: {e}")
     finally:
-        conn.close()
+        close_db(conn)
 
