@@ -15,7 +15,7 @@
 
 # Command Line History (newest to oldest):
 :wqa
-|2,0,1714623028,,"wqa"
+|2,0,1715114477,,"wqa"
 :qa
 |2,0,1714619507,,"qa"
 :q
@@ -99,9 +99,28 @@
 |<"        success = False","        attempts = 0","        while not success and attempts < 5:","            url = f\"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}\"","            response = requests.get(url)","            attempts += 1","            if response.status_code == 200:","                all_breadcrumbs[vehicle_id] = response.json()","                print(f\"{index_str} Successfully fetched data for vehicle ID {vehicle_id}\")",>32
 |<"                success = True","            time.sleep(1)","        if not success:","            all_breadcrumbs[vehicle_id] = []","            print(f\"{index_str} Failed to get data after 5 attempts for vehicle ID {vehicle_id}\")"
 ""1	LINE	0
-	TriMet__2024-04-11.json
-|3,1,1,1,1,0,1714623026,"TriMet__2024-04-11.json"
+	# Ignore the Google Cloud service account key
+	cs510-project1-6c1b06b5846a.json
+	
+	# Ignore Python environment folder
+	myenv/
+	
+	# Ignore compiled Python files
+	*.pyc
+	
+	# Ignore log files and directories
+	*.log
+	logs/
+	
+	# Ignore data files that may contain sensitive or large data
+	*.csv
+	*.json
+	
+|3,1,1,1,17,0,1715114473,"# Ignore the Google Cloud service account key","cs510-project1-6c1b06b5846a.json","","# Ignore Python environment folder","myenv/","","# Ignore compiled Python files","*.pyc","","# Ignore log files and directories","*.log","logs/","","# Ignore data files that may contain sensitive or large data","*.csv","*.json",""
 "2	LINE	0
+	TriMet__2024-04-11.json
+|3,0,2,1,1,0,1714623026,"TriMet__2024-04-11.json"
+"3	LINE	0
 	from datetime import datetime, timedelta
 	import json
 	from google.cloud import storage
@@ -152,14 +171,14 @@
 	
 	def upload_json_to_database(json_files):
 	    """Upload JSON data from files to the database, avoiding duplicates."""
-|3,0,2,1,50,0,1714622897,"from datetime import datetime, timedelta","import json","from google.cloud import storage","import os","import database_uploader as db_up","from tqdm import tqdm","","# Constants","BUCKET_NAME = 'cs510-spring24-project1-bucket'","FOLDER_NAME = 'data_via_direct_download'","BUCKET_CREDENTIALS_FILE = 'cs510-project1-6c1b06b5846a.json'","LOCAL_JSON_RECORD = 'uploaded_json_records.txt'","","TESTING = True","","",>93
+|3,0,3,1,50,0,1714622897,"from datetime import datetime, timedelta","import json","from google.cloud import storage","import os","import database_uploader as db_up","from tqdm import tqdm","","# Constants","BUCKET_NAME = 'cs510-spring24-project1-bucket'","FOLDER_NAME = 'data_via_direct_download'","BUCKET_CREDENTIALS_FILE = 'cs510-project1-6c1b06b5846a.json'","LOCAL_JSON_RECORD = 'uploaded_json_records.txt'","","TESTING = True","","",>93
 |<"def generate_date_named_files(start_date, end_date, prefix=\"TriMet__\", suffix=\".json\"):","    date_list = []","    current_date = start_date","    while current_date <= end_date:","        formatted_date = current_date.strftime('%Y-%m-%d')","        file_name = f\"{prefix}{formatted_date}{suffix}\"","        date_list.append(file_name)","        current_date += timedelta(days=1)","    return date_list","","","def download_json_files_from_bucket(file_names):",>64
 |<"    \"\"\"Download specified JSON files from GCP bucket.\"\"\"","    client = storage.Client.from_service_account_json(BUCKET_CREDENTIALS_FILE)","    bucket = client.bucket(BUCKET_NAME)","","    # Initialize tqdm progress bar","    pbar = tqdm(file_names, desc=\"Downloading JSON files\")","","    for file_name in pbar:","        blob = bucket.blob(f\"{FOLDER_NAME}/{file_name}\")","        if blob.exists():","            json_content = blob.download_as_string()",>41
 |<"            local_file_name = file_name","            with open(local_file_name, 'wb') as file:","                file.write(json_content)","            pbar.set_description(f\"Downloaded {file_name}\")","            yield local_file_name","        else:","            pbar.set_description(f\"{file_name} does not exist\")","","","def upload_json_to_database(json_files):","    \"\"\"Upload JSON data from files to the database, avoiding duplicates.\"\"\""
-"3	LINE	0
-	TriMet__2024-04-11.json
-|3,0,3,1,1,0,1714621357,"TriMet__2024-04-11.json"
 "4	LINE	0
+	TriMet__2024-04-11.json
+|3,0,4,1,1,0,1714621357,"TriMet__2024-04-11.json"
+"5	LINE	0
 	if __name__ == "__main__":
 	    from datetime import datetime
 	    # Define the range of dates for the files to count breadcrumbs
@@ -176,9 +195,9 @@
 	            print(f"{file_name}: {count} breadcrumbs")
 	        else:
 	            print(f"{file_name}: File does not exist")
-|3,0,4,1,16,0,1714621066,"if __name__ == \"__main__\":","    from datetime import datetime","    # Define the range of dates for the files to count breadcrumbs","    start_date = datetime(2024, 4, 12)","    end_date = datetime.now()  # or any specific date you want to end at","    file_names = generate_date_named_files(start_date, end_date)","","    # Count breadcrumbs","    breadcrumb_counts = count_breadcrumbs_in_files(file_names)","    ",>21
+|3,0,5,1,16,0,1714621066,"if __name__ == \"__main__\":","    from datetime import datetime","    # Define the range of dates for the files to count breadcrumbs","    start_date = datetime(2024, 4, 12)","    end_date = datetime.now()  # or any specific date you want to end at","    file_names = generate_date_named_files(start_date, end_date)","","    # Count breadcrumbs","    breadcrumb_counts = count_breadcrumbs_in_files(file_names)","    ",>21
 |<"    # Print results","    for file_name, count in breadcrumb_counts.items():","        if count is not None:","            print(f\"{file_name}: {count} breadcrumbs\")","        else:","            print(f\"{file_name}: File does not exist\")"
-"5	LINE	0
+"6	LINE	0
 	def upload_json_to_database(json_files):
 	    """Upload JSON data from files to the database, avoiding duplicates."""
 	    uploaded_files = set()
@@ -199,10 +218,10 @@
 	            with open(LOCAL_JSON_RECORD, 'a') as file:
 	                file.write(json_file + '\n')
 	            print(f"Uploaded data from {json_file} to the database")
-|3,0,5,1,20,0,1714619817,"def upload_json_to_database(json_files):","    \"\"\"Upload JSON data from files to the database, avoiding duplicates.\"\"\"","    uploaded_files = set()","    if os.path.exists(LOCAL_JSON_RECORD):","        with open(LOCAL_JSON_RECORD, 'r') as file:","            uploaded_files = set(file.read().splitlines())","    ","    for json_file in json_files:","        if json_file not in uploaded_files:",>48
+|3,0,6,1,20,0,1714619817,"def upload_json_to_database(json_files):","    \"\"\"Upload JSON data from files to the database, avoiding duplicates.\"\"\"","    uploaded_files = set()","    if os.path.exists(LOCAL_JSON_RECORD):","        with open(LOCAL_JSON_RECORD, 'r') as file:","            uploaded_files = set(file.read().splitlines())","    ","    for json_file in json_files:","        if json_file not in uploaded_files:",>48
 |<"            with open(json_file, 'r') as file:","                data = json.load(file)","                # Iterate over each vehicle's events","                for vehicle_id, events in data.items():","                    try:","                        db_up.insert_breadcrumb(events)  # Pass the list of events","                    except Exception as e:","                        print(f\"Error processing {json_file} for vehicle {vehicle_id}: {e}\")",>56
 |<"            with open(LOCAL_JSON_RECORD, 'a') as file:","                file.write(json_file + '\\n')","            print(f\"Uploaded data from {json_file} to the database\")"
-"6	LINE	0
+"7	LINE	0
 	def download_json_files_from_bucket(file_names):
 	    """Download specified JSON files from GCP bucket."""
 	    client = storage.Client.from_service_account_json(BUCKET_CREDENTIALS_FILE)
@@ -218,9 +237,9 @@
 	            yield local_file_name
 	        else:
 	            print(f"{file_name} does not exist in the bucket.")
-|3,0,6,1,15,0,1714619798,"def download_json_files_from_bucket(file_names):","    \"\"\"Download specified JSON files from GCP bucket.\"\"\"","    client = storage.Client.from_service_account_json(BUCKET_CREDENTIALS_FILE)","    bucket = client.bucket(BUCKET_NAME)","","    for file_name in file_names:","        blob = bucket.blob(f\"{FOLDER_NAME}/{file_name}\")","        if blob.exists():","            json_content = blob.download_as_string()",>41
+|3,0,7,1,15,0,1714619798,"def download_json_files_from_bucket(file_names):","    \"\"\"Download specified JSON files from GCP bucket.\"\"\"","    client = storage.Client.from_service_account_json(BUCKET_CREDENTIALS_FILE)","    bucket = client.bucket(BUCKET_NAME)","","    for file_name in file_names:","        blob = bucket.blob(f\"{FOLDER_NAME}/{file_name}\")","        if blob.exists():","            json_content = blob.download_as_string()",>41
 |<"            local_file_name = file_name","            with open(local_file_name, 'wb') as file:","                file.write(json_content)","            yield local_file_name","        else:","            print(f\"{file_name} does not exist in the bucket.\")"
-"7	LINE	0
+"8	LINE	0
 	def insert_breadcrumb(data):
 	    conn = connect_db()
 	    try:
@@ -248,10 +267,10 @@
 	        print(f"Database error: {e}")
 	    finally:
 	        conn.close()
-|3,0,7,1,27,0,1714619628,"def insert_breadcrumb(data):","    conn = connect_db()","    try:","        with conn.cursor() as cursor:","            for message in data:","                print(f\"MESSAGE =\\n\\n{message}\")","                # Assuming message is now passed correctly as a dictionary","                trip_id = message['EVENT_NO_TRIP']","                vehicle_id = message['VEHICLE_ID']",>58
+|3,0,8,1,27,0,1714619628,"def insert_breadcrumb(data):","    conn = connect_db()","    try:","        with conn.cursor() as cursor:","            for message in data:","                print(f\"MESSAGE =\\n\\n{message}\")","                # Assuming message is now passed correctly as a dictionary","                trip_id = message['EVENT_NO_TRIP']","                vehicle_id = message['VEHICLE_ID']",>58
 |<"                tstamp = parse_date(message['OPD_DATE'])","                latitude = message['GPS_LATITUDE']","                longitude = message['GPS_LONGITUDE']","                speed = 0  # Assuming a default speed if not provided","                ","                # Ensure the trip exists before inserting breadcrumb","                ensure_trip_exists(trip_id, vehicle_id)","","                query = \"\"\"",>86
 |<"                INSERT INTO breadcrumb (tstamp, latitude, longitude, speed, trip_id)","                VALUES (%s, %s, %s, %s, %s)","                \"\"\"","                cursor.execute(query, (tstamp, latitude, longitude, speed, trip_id))","            conn.commit()","    except psycopg2.Error as e:","        print(f\"Database error: {e}\")","    finally:","        conn.close()"
-"8	LINE	0
+"9	LINE	0
 	def upload_json_to_database(json_files):
 	    """Upload JSON data from files to the database, avoiding duplicates."""
 	    uploaded_files = set()
@@ -266,48 +285,99 @@
 	            db_up.insert_breadcrumb(data)
 	            with open(LOCAL_JSON_RECORD, 'a') as file:
 	                file.write(json_file + '\n')
-|3,0,8,1,14,0,1714619602,"def upload_json_to_database(json_files):","    \"\"\"Upload JSON data from files to the database, avoiding duplicates.\"\"\"","    uploaded_files = set()","    if os.path.exists(LOCAL_JSON_RECORD):","        with open(LOCAL_JSON_RECORD, 'r') as file:","            uploaded_files = set(file.read().splitlines())","    ","    for json_file in json_files:","        if json_file not in uploaded_files:",>48
+|3,0,9,1,14,0,1714619602,"def upload_json_to_database(json_files):","    \"\"\"Upload JSON data from files to the database, avoiding duplicates.\"\"\"","    uploaded_files = set()","    if os.path.exists(LOCAL_JSON_RECORD):","        with open(LOCAL_JSON_RECORD, 'r') as file:","            uploaded_files = set(file.read().splitlines())","    ","    for json_file in json_files:","        if json_file not in uploaded_files:",>48
 |<"            with open(json_file, 'r') as file:","                data = json.load(file)","            db_up.insert_breadcrumb(data)","            with open(LOCAL_JSON_RECORD, 'a') as file:","                file.write(json_file + '\\n')"
-"9	LINE	0
-	
-|3,0,9,1,1,0,1714618146,""
 "-	CHAR	0
 	'cs510-project1-6c1b06b5846a.json'
 |3,0,36,0,1,0,1713289532,"'cs510-project1-6c1b06b5846a.json'"
 
 # File marks:
-'0  1  0  ~/uploaded_json_records.txt
-|4,48,1,0,1714623028,"~/uploaded_json_records.txt"
-'1  103  0  ~/from_bucket_to_database.py
-|4,49,103,0,1714622901,"~/from_bucket_to_database.py"
+'0  22  0  ~/.gitignore
+|4,48,22,0,1715114477,"~/.gitignore"
+'1  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,49,14,0,1715114312,"~/cs510-project1-6c1b06b5846a.json"
 '2  1  0  ~/uploaded_json_records.txt
-|4,50,1,0,1714621358,"~/uploaded_json_records.txt"
-'3  61  0  ~/breadcrumb_counter.py
-|4,51,61,0,1714621074,"~/breadcrumb_counter.py"
-'4  25  43  ~/breadcrumb_counter.py
-|4,52,25,43,1714620740,"~/breadcrumb_counter.py"
-'5  25  43  ~/breadcrumb_counter.py
-|4,53,25,43,1714620740,"~/breadcrumb_counter.py"
-'6  1  0  ~/from_bucket_to_database.py
-|4,54,1,0,1714619822,"~/from_bucket_to_database.py"
-'7  74  0  ~/from_bucket_to_database.py
-|4,55,74,0,1714619822,"~/from_bucket_to_database.py"
-'8  63  0  ~/database_uploader.py
-|4,56,63,0,1714619635,"~/database_uploader.py"
-'9  1  0  ~/from_bucket_to_database.py
-|4,57,1,0,1714619614,"~/from_bucket_to_database.py"
+|4,50,1,0,1714623028,"~/uploaded_json_records.txt"
+'3  103  0  ~/from_bucket_to_database.py
+|4,51,103,0,1714622901,"~/from_bucket_to_database.py"
+'4  1  0  ~/uploaded_json_records.txt
+|4,52,1,0,1714621358,"~/uploaded_json_records.txt"
+'5  61  0  ~/breadcrumb_counter.py
+|4,53,61,0,1714621074,"~/breadcrumb_counter.py"
+'6  25  43  ~/breadcrumb_counter.py
+|4,54,25,43,1714620740,"~/breadcrumb_counter.py"
+'7  25  43  ~/breadcrumb_counter.py
+|4,55,25,43,1714620740,"~/breadcrumb_counter.py"
+'8  1  0  ~/from_bucket_to_database.py
+|4,56,1,0,1714619822,"~/from_bucket_to_database.py"
+'9  74  0  ~/from_bucket_to_database.py
+|4,57,74,0,1714619822,"~/from_bucket_to_database.py"
 
 # Jumplist (newest first):
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  1  0  ~/.gitignore
+|4,39,1,0,1715114470,"~/.gitignore"
+-'  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,14,0,1715114312,"~/cs510-project1-6c1b06b5846a.json"
+-'  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,14,0,1715114312,"~/cs510-project1-6c1b06b5846a.json"
+-'  1  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,1,0,1715114305,"~/cs510-project1-6c1b06b5846a.json"
+-'  1  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,1,0,1715114305,"~/cs510-project1-6c1b06b5846a.json"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714623028,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714623028,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714623028,"~/uploaded_json_records.txt"
 -'  1  0  ~/uploaded_json_records.txt
 |4,39,1,0,1714623028,"~/uploaded_json_records.txt"
 -'  103  0  ~/from_bucket_to_database.py
 |4,39,103,0,1714622901,"~/from_bucket_to_database.py"
 -'  103  0  ~/from_bucket_to_database.py
 |4,39,103,0,1714622901,"~/from_bucket_to_database.py"
+-'  103  0  ~/from_bucket_to_database.py
+|4,39,103,0,1714622901,"~/from_bucket_to_database.py"
+-'  103  0  ~/from_bucket_to_database.py
+|4,39,103,0,1714622901,"~/from_bucket_to_database.py"
+-'  103  0  ~/from_bucket_to_database.py
+|4,39,103,0,1714622901,"~/from_bucket_to_database.py"
+-'  103  0  ~/from_bucket_to_database.py
+|4,39,103,0,1714622901,"~/from_bucket_to_database.py"
+-'  103  0  ~/from_bucket_to_database.py
+|4,39,103,0,1714622901,"~/from_bucket_to_database.py"
+-'  103  0  ~/from_bucket_to_database.py
+|4,39,103,0,1714622901,"~/from_bucket_to_database.py"
 -'  1  4  ~/from_bucket_to_database.py
 |4,39,1,4,1714622897,"~/from_bucket_to_database.py"
 -'  1  4  ~/from_bucket_to_database.py
 |4,39,1,4,1714622897,"~/from_bucket_to_database.py"
+-'  1  4  ~/from_bucket_to_database.py
+|4,39,1,4,1714622897,"~/from_bucket_to_database.py"
+-'  1  4  ~/from_bucket_to_database.py
+|4,39,1,4,1714622897,"~/from_bucket_to_database.py"
+-'  1  4  ~/from_bucket_to_database.py
+|4,39,1,4,1714622897,"~/from_bucket_to_database.py"
+-'  1  4  ~/from_bucket_to_database.py
+|4,39,1,4,1714622897,"~/from_bucket_to_database.py"
+-'  1  4  ~/from_bucket_to_database.py
+|4,39,1,4,1714622897,"~/from_bucket_to_database.py"
+-'  1  4  ~/from_bucket_to_database.py
+|4,39,1,4,1714622897,"~/from_bucket_to_database.py"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714621358,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714621358,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714621358,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714621358,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714621358,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1714621358,"~/uploaded_json_records.txt"
 -'  1  0  ~/uploaded_json_records.txt
 |4,39,1,0,1714621358,"~/uploaded_json_records.txt"
 -'  1  0  ~/uploaded_json_records.txt
@@ -328,6 +398,102 @@
 |4,39,61,0,1714621074,"~/breadcrumb_counter.py"
 -'  61  0  ~/breadcrumb_counter.py
 |4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  61  0  ~/breadcrumb_counter.py
+|4,39,61,0,1714621074,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
+-'  25  43  ~/breadcrumb_counter.py
+|4,39,25,43,1714621052,"~/breadcrumb_counter.py"
 -'  25  43  ~/breadcrumb_counter.py
 |4,39,25,43,1714621052,"~/breadcrumb_counter.py"
 -'  25  43  ~/breadcrumb_counter.py
@@ -348,158 +514,25 @@
 |4,39,25,43,1714620740,"~/breadcrumb_counter.py"
 -'  25  43  ~/breadcrumb_counter.py
 |4,39,25,43,1714620740,"~/breadcrumb_counter.py"
--'  25  43  ~/breadcrumb_counter.py
-|4,39,25,43,1714620740,"~/breadcrumb_counter.py"
--'  25  43  ~/breadcrumb_counter.py
-|4,39,25,43,1714620740,"~/breadcrumb_counter.py"
--'  25  43  ~/breadcrumb_counter.py
-|4,39,25,43,1714620740,"~/breadcrumb_counter.py"
--'  25  43  ~/breadcrumb_counter.py
-|4,39,25,43,1714620740,"~/breadcrumb_counter.py"
--'  25  43  ~/breadcrumb_counter.py
-|4,39,25,43,1714620740,"~/breadcrumb_counter.py"
--'  25  43  ~/breadcrumb_counter.py
-|4,39,25,43,1714620740,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  24  12  ~/breadcrumb_counter.py
-|4,39,24,12,1714620736,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  22  0  ~/breadcrumb_counter.py
-|4,39,22,0,1714620733,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  1  0  ~/breadcrumb_counter.py
-|4,39,1,0,1714620719,"~/breadcrumb_counter.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  74  0  ~/from_bucket_to_database.py
-|4,39,74,0,1714619822,"~/from_bucket_to_database.py"
--'  49  0  ~/from_bucket_to_database.py
-|4,39,49,0,1714619771,"~/from_bucket_to_database.py"
--'  49  0  ~/from_bucket_to_database.py
-|4,39,49,0,1714619771,"~/from_bucket_to_database.py"
--'  49  0  ~/from_bucket_to_database.py
-|4,39,49,0,1714619771,"~/from_bucket_to_database.py"
--'  49  0  ~/from_bucket_to_database.py
-|4,39,49,0,1714619771,"~/from_bucket_to_database.py"
--'  49  0  ~/from_bucket_to_database.py
-|4,39,49,0,1714619771,"~/from_bucket_to_database.py"
 
 # History of marks within files (newest to oldest):
+
+> ~/.gitignore
+	*	1715114477	0
+	"	22	0
+	^	22	0
+	.	21	7
+	+	1	21
+	+	21	7
+
+> ~/cs510-project1-6c1b06b5846a.json
+	*	1715114312	0
+	"	14	0
+	^	14	0
+	.	13	1
+	+	39	1
+	+	26	1
+	+	13	1
 
 > ~/uploaded_json_records.txt
 	*	1714623027	0
@@ -548,14 +581,6 @@
 	+	64	0
 	+	36	0
 	+	62	20
-
-> ~/cs510-project1-6c1b06b5846a.json
-	*	1714619506	0
-	"	5	0
-	^	14	0
-	.	13	1
-	+	26	1
-	+	13	1
 
 > ~/from_messages_to_database.py
 	*	1714610173	0
@@ -650,13 +675,6 @@
 > ~/receive_breadcrumbs.log
 	*	1713808473	0
 	"	1	0
-
-> ~/.gitignore
-	*	1713536988	0
-	"	17	0
-	^	17	0
-	.	16	6
-	+	16	6
 
 > ~/cron_output.log
 	*	1713473229	0
