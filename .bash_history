@@ -268,3 +268,74 @@ cp from_messages_to_database.py database_uploader.py
 rm from_messages_to_database.py 
 ls
 vim from_bucket_to_database.py 
+ls
+vim database_uploader.py 
+vim from_bucket_to_database.py 
+pic database_uploader.py 
+pic from_bucket_to_database.py 
+git status
+vim uploaded_json_records.txt 
+git fetch https://github.com/cverbout/Data-Engineering-Group-Project.git WMM/database-loader
+git reset --hard FETCH_HEAD
+git clean -fdx
+source myenv/bin/activate
+python3 -m venv myenv
+source myenv/bin/activate
+pip install -r requirements.txt  # Assuming you have a requirements file
+source myenv/bin/activate
+ls
+python3 publish_breadcrumb_messages.py 
+pip install requests
+python3 publish_breadcrumb_messages.py 
+pip install pandas
+python3 publish_breadcrumb_messages.py 
+pic publish_breadcrumb_messages.py 
+pip install google-cloud-pubsub
+pip install json
+python3 publish_breadcrumb_messages.py 
+pip install tqdm
+python3 publish_breadcrumb_messages.py 
+python3 recieve_breadcrumb_messages.py 
+pic recieve_breadcrumb_messages.py 
+pip install google-cloud-storage
+python3 recieve_breadcrumb_messages.py 
+pip install google-cloud-logging
+python3 recieve_breadcrumb_messages.py 
+ls
+python3 from_bucket_to_database.py 
+pic from_bucket_to_database.py 
+pic uploaded_json_records.txt 
+pic database_uploader.py 
+pip install psycopg2-binary
+python3 from_bucket_to_database.py 
+vim cs510-project1-6c1b06b5846a.json
+pip freeze > requirements.txt
+ls -a
+vim .gitignore 
+git branch
+# Untrack and keep the files locally
+git rm -r --cached myenv
+git rm -r --cached .ssh
+git rm -r --cached .local
+git rm --cached *.log
+git rm --cached *.csv
+git rm --cached *.json
+git rm -r --cached __pycache__
+# Commit the changes to your repository
+git commit -m "Untrack files that should be ignored"
+git status
+git add .
+git commit -m "updated requirements file"
+git push
+git reset HEAD^  # This command will undo the last commit but keep your changes
+git restore --staged cs510-project1-6c1b06b5846a.json  # Unstage the JSON file
+git add .  # Add all other changes
+git commit -m "Updated requirements file without JSON"
+git push  # Attempt to push again
+git filter-branch --force --index-filter "git rm --cached --ignore-unmatch cs510-project1-6c1b06b5846a.json" --prune-empty --tag-name-filter cat -- --all
+git push origin --force --all
+git status
+git checkout main; git fetch --all; git pull
+git branch
+git checkout master; git fetch --all; git pull
+git branch

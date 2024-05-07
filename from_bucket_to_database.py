@@ -66,28 +66,43 @@ def impute_gps_coordinates(events):
 
 
 def upload_json_to_database(json_files):
-    uploaded_files = set()
+    uploaded_entries = {}  # Start with an empty dictionary
     if os.path.exists(LOCAL_JSON_RECORD):
         with open(LOCAL_JSON_RECORD, 'r') as file:
-            uploaded_files = set(file.read().splitlines())
+            file_contents = file.read().strip()  # Read the contents and strip whitespace
+            if file_contents:  # Check if the contents are non-empty after stripping
+                try:
+                    uploaded_entries = json.loads(file_contents)  # Load JSON data
+                except json.JSONDecodeError:
+                    print("Warning: JSON data in record file is corrupted. Starting with an empty record.")
+                    uploaded_entries = {}
 
-    pbar = tqdm(json_files, desc="Uploading JSON data")
-    
-    for json_file in pbar:
-        if json_file not in uploaded_files:
-            with open(json_file, 'r') as file:
-                data = json.load(file)
-                for vehicle_id, events in data.items():
+    file_pbar = tqdm(json_files, desc="Processing JSON files")  # Top-level progress bar for files
+    for json_file in file_pbar:
+        with open(json_file, 'r') as file:
+            data = json.load(file)
+            vehicle_ids = list(data.keys())
+            vehicle_pbar = tqdm(vehicle_ids, desc=f"Uploading vehicles in {json_file}", leave=False)  # Nested progress bar for vehicle IDs
+            for vehicle_id in vehicle_pbar:
+                events = data[vehicle_id]
+                file_vehicle_id = json_file + "_" + str(vehicle_id)
+                if file_vehicle_id not in uploaded_entries:
                     impute_gps_coordinates(events)
                     try:
                         db_up.insert_breadcrumb(events)
+                        uploaded_entries[file_vehicle_id] = True
                     except Exception as e:
+                        vehicle_pbar.set_postfix({"Error": "Failed upload"})
                         print(f"Error processing {json_file} for vehicle {vehicle_id}: {e}")
-            with open(LOCAL_JSON_RECORD, 'a') as file:
-                file.write(json_file + '\n')
-            pbar.set_description(f"Uploaded {json_file}")
-        else:
-            pbar.set_description(f"Skipped {json_file} (already uploaded)")
+                        continue
+                vehicle_pbar.set_description(f"Vehicle ID {vehicle_id}")
+            file_pbar.set_description(f"Processed {json_file}")
+
+        # Update the progress file
+        with open(LOCAL_JSON_RECORD, 'w') as file:
+            json.dump(uploaded_entries, file)
+
+
 
 
 if __name__ == "__main__":
