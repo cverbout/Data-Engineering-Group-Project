@@ -11,17 +11,21 @@
 # hlsearch on (H) or off (h):
 ~h
 # Last Search Pattern:
-~Msle0~/\<CloudLoggingHandler\>
+~MSle0~/breadcrumb
 
 # Command Line History (newest to oldest):
 :wqa
-|2,0,1713825062,,"wqa"
+|2,0,1715116962,,"wqa"
 :qa
-|2,0,1713825027,,"qa"
+|2,0,1715116923,,"qa"
+:q
+|2,0,1714610000,,"q"
 :wq
 |2,0,1713380009,,"wq"
 
 # Search String History (newest to oldest):
+?/breadcrumb
+|2,1,1714620733,47,"breadcrumb"
 ?/print
 |2,1,1713380007,47,"print"
 ? \<CloudLoggingHandler\>
@@ -95,466 +99,439 @@
 |<"        success = False","        attempts = 0","        while not success and attempts < 5:","            url = f\"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}\"","            response = requests.get(url)","            attempts += 1","            if response.status_code == 200:","                all_breadcrumbs[vehicle_id] = response.json()","                print(f\"{index_str} Successfully fetched data for vehicle ID {vehicle_id}\")",>32
 |<"                success = True","            time.sleep(1)","        if not success:","            all_breadcrumbs[vehicle_id] = []","            print(f\"{index_str} Failed to get data after 5 attempts for vehicle ID {vehicle_id}\")"
 ""1	LINE	0
-	import requests
-	import pandas as pd
-	from datetime import datetime
-	from google.cloud import pubsub_v1
-	import json
-	import time
-	from tqdm import tqdm
-	import logging
-	
-	# Setup basic logging
-	logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-	
-	def get_vehicle_ids():
-	    doc_key = "10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0"
-	    url = f"https://docs.google.com/spreadsheets/d/{doc_key}/export?format=csv"
-	    response = requests.get(url)
-	    csv_data = response.content
-	    with open("vehicle_ids_sheet.csv", "wb") as file:
-	        file.write(csv_data)
-	    vehicle_ids = pd.read_csv("vehicle_ids_sheet.csv")['Doodle'].tolist()
-	    return vehicle_ids
-	
-	def publish_breadcrumbs():
-	    project_id = "cs510-project1"
-	    topic_id = "cs510-spring24-topic"
-	    publisher = pubsub_v1.PublisherClient()
-	    topic_path = publisher.topic_path(project_id, topic_id)
-	
-	    vehicle_ids = get_vehicle_ids()
-	    total_published = 0
-	
-	    for vehicle_id in tqdm(vehicle_ids, desc="Processing vehicle IDs"):
-	        url = f"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}"
-	        response = requests.get(url)
-	        if response.status_code == 200:
-	            breadcrumbs = response.json()
-	            for breadcrumb in breadcrumbs:
-	                data_str = json.dumps(breadcrumb)
-	                data_bytes = data_str.encode('utf-8')
-	                publisher.publish(topic_path, data_bytes)
-	                total_published += 1
-	        else:
-	            logging.error(f"Failed to fetch data for vehicle ID {vehicle_id}")
-	        time.sleep(1)  # Respectful delay to avoid rate limiting
-	    
-	    logging.info(f"Total breadcrumbs published: {total_published}")
-	
-	if __name__ == "__main__":
-	    publish_breadcrumbs()
-	
-|3,1,1,1,50,0,1713822317,"import requests","import pandas as pd","from datetime import datetime","from google.cloud import pubsub_v1","import json","import time","from tqdm import tqdm","import logging","","# Setup basic logging","logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')","","def get_vehicle_ids():","    doc_key = \"10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0\"",>83
-|<"    url = f\"https://docs.google.com/spreadsheets/d/{doc_key}/export?format=csv\"","    response = requests.get(url)","    csv_data = response.content","    with open(\"vehicle_ids_sheet.csv\", \"wb\") as file:","        file.write(csv_data)","    vehicle_ids = pd.read_csv(\"vehicle_ids_sheet.csv\")['Doodle'].tolist()","    return vehicle_ids","","def publish_breadcrumbs():","    project_id = \"cs510-project1\"","    topic_id = \"cs510-spring24-topic\"",>45
-|<"    publisher = pubsub_v1.PublisherClient()","    topic_path = publisher.topic_path(project_id, topic_id)","","    vehicle_ids = get_vehicle_ids()","    total_published = 0","","    for vehicle_id in tqdm(vehicle_ids, desc=\"Processing vehicle IDs\"):","        url = f\"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}\"","        response = requests.get(url)","        if response.status_code == 200:","            breadcrumbs = response.json()",>44
-|<"            for breadcrumb in breadcrumbs:","                data_str = json.dumps(breadcrumb)","                data_bytes = data_str.encode('utf-8')","                publisher.publish(topic_path, data_bytes)","                total_published += 1","        else:","            logging.error(f\"Failed to fetch data for vehicle ID {vehicle_id}\")","        time.sleep(1)  # Respectful delay to avoid rate limiting","    ",>71
-|<"    logging.info(f\"Total breadcrumbs published: {total_published}\")","","if __name__ == \"__main__\":","    publish_breadcrumbs()",""
+	# The rest of your code...
+|3,1,1,1,1,0,1715116960,"# The rest of your code..."
 "2	LINE	0
-	import google.cloud.pubsub_v1 as pubsub_v1
-	from google.cloud import storage
-	import json
-	import google.cloud.logging
-	from google.cloud.logging.handlers import CloudLoggingHandler
-	import logging
-	import sys
-	from datetime import datetime
+	def upload_json_to_database(json_files):
+	    uploaded_entries = {}  # Start with an empty dictionary
+	    if os.path.exists(LOCAL_JSON_RECORD):
+	        with open(LOCAL_JSON_RECORD, 'r') as file:
+	            file_contents = file.read()  # Read the contents
+	            if file_contents:  # Check if the contents are non-empty
+	                uploaded_entries = json.loads(file_contents)  # Load JSON data
+	            else:
+	                uploaded_entries = {}  # Initialize as empty if the file is empty
 	
-	# Inline argument which gives receiver a title for logging
-	instance_id = sys.argv[1] if len(sys.argv) > 1 else "CronJob Receiver"
+	    pbar = tqdm(json_files, desc="Uploading JSON data")
+	    for json_file in pbar:
+	        with open(json_file, 'r') as file:
+	            data = json.load(file)
+	            for vehicle_id, events in data.items():
+	                file_vehicle_id = json_file + "_" + str(vehicle_id)
+	                if file_vehicle_id not in uploaded_entries:
+	                    impute_gps_coordinates(events)
+	                    try:
+	                        db_up.insert_breadcrumb(events)
+	                        uploaded_entries[file_vehicle_id] = True
+	                    except Exception as e:
+	                        print(f"Error processing {json_file} for vehicle {vehicle_id}: {e}")
+	                        continue
+	            pbar.set_description(f"Processed {json_file}")
 	
-	project_id = "cs510-project1"
-	subscription_id = "cs510-spring24-sub"
-	subscriber = pubsub_v1.SubscriberClient()
-	subscription_path = subscriber.subscription_path(project_id, subscription_id)
-	
-	# Setup logging
-	client = google.cloud.logging.Client()
-	handler = CloudLoggingHandler(client)
-	cloud_logger = logging.getLogger('cloudLogger')
-	cloud_logger.setLevel(logging.INFO)
-	cloud_logger.addHandler(handler)
-	
-	# Temporary storage for messages
-	messages = []
-	
-	# Prepare storage client
-	storage_client = storage.Client()
-	bucket = storage_client.bucket('cs510-spring24-project1-bucket')
-	
-	def callback(message):
-	    message_data = json.loads(message.data.decode('utf-8'))
-	    messages.append(message_data)
-	    message.ack()
-	    if len(messages) % 10000 == 0:
-	        print(f"{instance_id}: Processed {len(messages)} messages.", end='\r', flush=True)
-	
-	
-	def process_messages(messages):
-	    if messages:
-	        cloud_logger.info(f"Processing {len(messages)} messages")
-	        # Processing logic here
-	        cloud_logger.info("All messages processed and saved.")
-	    else:
-	        cloud_logger.info("No new messages to process.")
-	
-	
-	def sort_and_store_messages():
-	    if not messages:
-|3,0,2,1,50,0,1713822185,"import google.cloud.pubsub_v1 as pubsub_v1","from google.cloud import storage","import json","import google.cloud.logging","from google.cloud.logging.handlers import CloudLoggingHandler","import logging","import sys","from datetime import datetime","","# Inline argument which gives receiver a title for logging","instance_id = sys.argv[1] if len(sys.argv) > 1 else \"CronJob Receiver\"","","project_id = \"cs510-project1\"",>42
-|<"subscription_id = \"cs510-spring24-sub\"","subscriber = pubsub_v1.SubscriberClient()","subscription_path = subscriber.subscription_path(project_id, subscription_id)","","# Setup logging","client = google.cloud.logging.Client()","handler = CloudLoggingHandler(client)","cloud_logger = logging.getLogger('cloudLogger')","cloud_logger.setLevel(logging.INFO)","cloud_logger.addHandler(handler)","","# Temporary storage for messages","messages = []","","# Prepare storage client",>35
-|<"storage_client = storage.Client()","bucket = storage_client.bucket('cs510-spring24-project1-bucket')","","def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()","    if len(messages) % 10000 == 0:","        print(f\"{instance_id}: Processed {len(messages)} messages.\", end='\\r', flush=True)","","","def process_messages(messages):","    if messages:",>69
-|<"        cloud_logger.info(f\"Processing {len(messages)} messages\")","        # Processing logic here","        cloud_logger.info(\"All messages processed and saved.\")","    else:","        cloud_logger.info(\"No new messages to process.\")","","","def sort_and_store_messages():","    if not messages:"
+	        # Update the progress file
+	        with open(LOCAL_JSON_RECORD, 'w') as file:
+	            json.dump(uploaded_entries, file)
+|3,0,2,1,29,0,1715116956,"def upload_json_to_database(json_files):","    uploaded_entries = {}  # Start with an empty dictionary","    if os.path.exists(LOCAL_JSON_RECORD):","        with open(LOCAL_JSON_RECORD, 'r') as file:","            file_contents = file.read()  # Read the contents","            if file_contents:  # Check if the contents are non-empty","                uploaded_entries = json.loads(file_contents)  # Load JSON data","            else:",>83
+|<"                uploaded_entries = {}  # Initialize as empty if the file is empty","","    pbar = tqdm(json_files, desc=\"Uploading JSON data\")","    for json_file in pbar:","        with open(json_file, 'r') as file:","            data = json.load(file)","            for vehicle_id, events in data.items():","                file_vehicle_id = json_file + \"_\" + str(vehicle_id)","                if file_vehicle_id not in uploaded_entries:",>52
+|<"                    impute_gps_coordinates(events)","                    try:","                        db_up.insert_breadcrumb(events)","                        uploaded_entries[file_vehicle_id] = True","                    except Exception as e:","                        print(f\"Error processing {json_file} for vehicle {vehicle_id}: {e}\")","                        continue","            pbar.set_description(f\"Processed {json_file}\")","","        # Update the progress file",>52
+|<"        with open(LOCAL_JSON_RECORD, 'w') as file:","            json.dump(uploaded_entries, file)"
 "3	LINE	0
-	
-|3,0,3,1,1,0,1713822141,""
+	TriMet__2024-04-11.json
+|3,0,3,1,1,0,1715116719,"TriMet__2024-04-11.json"
 "4	LINE	0
 	
-|3,0,4,1,1,0,1713821528,""
+|3,0,4,1,1,0,1715116634,""
 "5	LINE	0
-	def callback(message):
-	    message_data = json.loads(message.data.decode('utf-8'))
-	    messages.append(message_data)
-	    message.ack()
-|3,0,5,1,4,0,1713820797,"def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()"
+	# The rest of your code...
+|3,0,5,1,1,0,1715116634,"# The rest of your code..."
 "6	LINE	0
-	def callback(message):
-	    message_data = json.loads(message.data.decode('utf-8'))
-	    messages.append(message_data)
-	    message.ack()
-|3,0,6,1,4,0,1713820797,"def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()"
+	def upload_json_to_database(json_files):
+	    # Dictionary to store progress
+	    uploaded_entries = {}
+	    if os.path.exists(LOCAL_JSON_RECORD):
+	        with open(LOCAL_JSON_RECORD, 'r') as file:
+	            uploaded_entries = json.load(file)
+	
+	    pbar = tqdm(json_files, desc="Uploading JSON data")
+	    for json_file in pbar:
+	        with open(json_file, 'r') as file:
+	            data = json.load(file)
+	            for vehicle_id, events in data.items():
+	                file_vehicle_id = json_file + "_" + str(vehicle_id)
+	                if file_vehicle_id not in uploaded_entries:
+	                    impute_gps_coordinates(events)
+	                    try:
+	                        db_up.insert_breadcrumb(events)
+	                        # Update the record after successful upload
+	                        uploaded_entries[file_vehicle_id] = True
+	                    except Exception as e:
+	                        print(f"Error processing {json_file} for vehicle {vehicle_id}: {e}")
+	                        continue
+	            pbar.set_description(f"Processed {json_file}")
+	        # Update the progress file
+	        with open(LOCAL_JSON_RECORD, 'w') as file:
+	            json.dump(uploaded_entries, file)
+	
+|3,0,6,1,27,0,1715116628,"def upload_json_to_database(json_files):","    # Dictionary to store progress","    uploaded_entries = {}","    if os.path.exists(LOCAL_JSON_RECORD):","        with open(LOCAL_JSON_RECORD, 'r') as file:","            uploaded_entries = json.load(file)","","    pbar = tqdm(json_files, desc=\"Uploading JSON data\")","    for json_file in pbar:","        with open(json_file, 'r') as file:","            data = json.load(file)",>53
+|<"            for vehicle_id, events in data.items():","                file_vehicle_id = json_file + \"_\" + str(vehicle_id)","                if file_vehicle_id not in uploaded_entries:","                    impute_gps_coordinates(events)","                    try:","                        db_up.insert_breadcrumb(events)","                        # Update the record after successful upload","                        uploaded_entries[file_vehicle_id] = True",>44
+|<"                    except Exception as e:","                        print(f\"Error processing {json_file} for vehicle {vehicle_id}: {e}\")","                        continue","            pbar.set_description(f\"Processed {json_file}\")","        # Update the progress file","        with open(LOCAL_JSON_RECORD, 'w') as file:","            json.dump(uploaded_entries, file)",""
 "7	LINE	0
-	import google.cloud.pubsub_v1 as pubsub_v1
-	from google.cloud import storage
-	import json
-	import google.cloud.logging
-	from google.cloud.logging.handlers import CloudLoggingHandler
-	import logging
-	import sys
-	from datetime import datetime
+	def upload_json_to_database(json_files):
+	    uploaded_files = set()
+	    if os.path.exists(LOCAL_JSON_RECORD):
+	        with open(LOCAL_JSON_RECORD, 'r') as file:
+	            uploaded_files = set(file.read().splitlines())
 	
-	# Inline argument which gives receiver a title for logging
-	instance_id = sys.argv[1] if len(sys.argv) > 1 else "CronJob Receiver"
-	
-	project_id = "cs510-project1"
-	subscription_id = "cs510-spring24-sub"
-	subscriber = pubsub_v1.SubscriberClient()
-	subscription_path = subscriber.subscription_path(project_id, subscription_id)
-	
-	client = google.cloud.logging.Client()
-	handler = CloudLoggingHandler(client)
-	cloud_logger = logging.getLogger('cloudLogger')
-	cloud_logger.setLevel(logging.INFO)
-	cloud_logger.addHandler(handler)
-	
-	# Prepare storage client
-	storage_client = storage.Client()
-	bucket = storage_client.bucket('cs510-spring24-project1-bucket')
-	
-	# Temporary storage for messages
-	messages = []
-	
-	def callback(message):
-	    message_data = json.loads(message.data.decode('utf-8'))
-	    messages.append(message_data)
-	    message.ack()  # Acknowledge the message
+	    pbar = tqdm(json_files, desc="Uploading JSON data")
 	    
-	    if len(messages) % 1000 == 0:
-	        print(f"{instance_id}: Processed {len(messages)} messages.", end='\r', flush=True)
-	
-	
-	def sort_and_store_messages():
-	    if not messages:
-	        cloud_logger.info("No messages to process.")
-	        return
-	
-	    # Group messages by 'VEHICLE_ID'
-	    grouped_messages = {}
-	    for message in messages:
-	        vehicle_id = message['VEHICLE_ID']
-	        if vehicle_id not in grouped_messages:
-	            grouped_messages[vehicle_id] = []
-|3,0,7,1,50,0,1713808494,"import google.cloud.pubsub_v1 as pubsub_v1","from google.cloud import storage","import json","import google.cloud.logging","from google.cloud.logging.handlers import CloudLoggingHandler","import logging","import sys","from datetime import datetime","","# Inline argument which gives receiver a title for logging","instance_id = sys.argv[1] if len(sys.argv) > 1 else \"CronJob Receiver\"","","project_id = \"cs510-project1\"",>42
-|<"subscription_id = \"cs510-spring24-sub\"","subscriber = pubsub_v1.SubscriberClient()","subscription_path = subscriber.subscription_path(project_id, subscription_id)","","client = google.cloud.logging.Client()","handler = CloudLoggingHandler(client)","cloud_logger = logging.getLogger('cloudLogger')","cloud_logger.setLevel(logging.INFO)","cloud_logger.addHandler(handler)","","# Prepare storage client","storage_client = storage.Client()",>66
-|<"bucket = storage_client.bucket('cs510-spring24-project1-bucket')","","# Temporary storage for messages","messages = []","","def callback(message):","    message_data = json.loads(message.data.decode('utf-8'))","    messages.append(message_data)","    message.ack()  # Acknowledge the message","    ","    if len(messages) % 1000 == 0:","        print(f\"{instance_id}: Processed {len(messages)} messages.\", end='\\r', flush=True)","","","def sort_and_store_messages():",>22
-|<"    if not messages:","        cloud_logger.info(\"No messages to process.\")","        return","","    # Group messages by 'VEHICLE_ID'","    grouped_messages = {}","    for message in messages:","        vehicle_id = message['VEHICLE_ID']","        if vehicle_id not in grouped_messages:","            grouped_messages[vehicle_id] = []"
+	    for json_file in pbar:
+	        if json_file not in uploaded_files:
+	            with open(json_file, 'r') as file:
+	                data = json.load(file)
+	                for vehicle_id, events in data.items():
+	                    impute_gps_coordinates(events)
+	                    try:
+	                        db_up.insert_breadcrumb(events)
+	                    except Exception as e:
+	                        print(f"Error processing {json_file} for vehicle {vehicle_id}: {e}")
+	            with open(LOCAL_JSON_RECORD, 'a') as file:
+	                file.write(json_file + '\n')
+	            pbar.set_description(f"Uploaded {json_file}")
+	        else:
+	            pbar.set_description(f"Skipped {json_file} (already uploaded)")
+|3,0,7,1,23,0,1715116365,"def upload_json_to_database(json_files):","    uploaded_files = set()","    if os.path.exists(LOCAL_JSON_RECORD):","        with open(LOCAL_JSON_RECORD, 'r') as file:","            uploaded_files = set(file.read().splitlines())","","    pbar = tqdm(json_files, desc=\"Uploading JSON data\")","    ","    for json_file in pbar:","        if json_file not in uploaded_files:","            with open(json_file, 'r') as file:",>40
+|<"                data = json.load(file)","                for vehicle_id, events in data.items():","                    impute_gps_coordinates(events)","                    try:","                        db_up.insert_breadcrumb(events)","                    except Exception as e:","                        print(f\"Error processing {json_file} for vehicle {vehicle_id}: {e}\")","            with open(LOCAL_JSON_RECORD, 'a') as file:","                file.write(json_file + '\\n')",>61
+|<"            pbar.set_description(f\"Uploaded {json_file}\")","        else:","            pbar.set_description(f\"Skipped {json_file} (already uploaded)\")"
 "8	LINE	0
-	import requests
-	import pandas as pd
-	from datetime import datetime
-	from google.cloud import pubsub_v1
-	import json
-	import time
-	from tqdm import tqdm
+	# Ignore the Google Cloud service account key
+	cs510-project1-6c1b06b5846a.json
 	
-	def get_vehicle_ids():
-	    doc_key = "10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0"
-	    url = f"https://docs.google.com/spreadsheets/d/{doc_key}/export?format=csv"
-	    response = requests.get(url)
-	    csv_data = response.content
-	    with open("vehicle_ids_sheet.csv", "wb") as file:
-	        file.write(csv_data)
-	    vehicle_ids = pd.read_csv("vehicle_ids_sheet.csv")['Doodle'].tolist()
-	    return vehicle_ids
+	# Ignore Python environment folder
+	myenv/
 	
-	def publish_breadcrumbs():
-	    project_id = "cs510-project1"
-	    topic_id = "cs510-spring24-topic"
-	    publisher = pubsub_v1.PublisherClient()
-	    topic_path = publisher.topic_path(project_id, topic_id)
+	# Ignore compiled Python files
+	*.pyc
 	
-	    vehicle_ids = get_vehicle_ids()
+	# Ignore log files and directories
+	*.log
+	logs/
 	
-	    for vehicle_id in tqdm(vehicle_ids, desc="Processing vehicle IDs"):
-	        url = f"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}"
-	        response = requests.get(url)
-	        if response.status_code == 200:
-	            breadcrumbs = response.json()
-	            for breadcrumb in breadcrumbs:
-	                data_str = json.dumps(breadcrumb)
-	                data_bytes = data_str.encode('utf-8')
-	                publisher.publish(topic_path, data_bytes)
-	        time.sleep(1)  # Respectful delay to avoid rate limiting
+	# Ignore data files that may contain sensitive or large data
+	*.csv
+	*.json
 	
-	if __name__ == "__main__":
-	    publish_breadcrumbs()
-	
-|3,0,8,1,40,0,1713808463,"import requests","import pandas as pd","from datetime import datetime","from google.cloud import pubsub_v1","import json","import time","from tqdm import tqdm","","def get_vehicle_ids():","    doc_key = \"10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0\"","    url = f\"https://docs.google.com/spreadsheets/d/{doc_key}/export?format=csv\"","    response = requests.get(url)","    csv_data = response.content",>59
-|<"    with open(\"vehicle_ids_sheet.csv\", \"wb\") as file:","        file.write(csv_data)","    vehicle_ids = pd.read_csv(\"vehicle_ids_sheet.csv\")['Doodle'].tolist()","    return vehicle_ids","","def publish_breadcrumbs():","    project_id = \"cs510-project1\"","    topic_id = \"cs510-spring24-topic\"","    publisher = pubsub_v1.PublisherClient()","    topic_path = publisher.topic_path(project_id, topic_id)","","    vehicle_ids = get_vehicle_ids()","",>75
-|<"    for vehicle_id in tqdm(vehicle_ids, desc=\"Processing vehicle IDs\"):","        url = f\"https://busdata.cs.pdx.edu/api/getBreadCrumbs?vehicle_id={vehicle_id}\"","        response = requests.get(url)","        if response.status_code == 200:","            breadcrumbs = response.json()","            for breadcrumb in breadcrumbs:","                data_str = json.dumps(breadcrumb)","                data_bytes = data_str.encode('utf-8')",>59
-|<"                publisher.publish(topic_path, data_bytes)","        time.sleep(1)  # Respectful delay to avoid rate limiting","","if __name__ == \"__main__\":","    publish_breadcrumbs()",""
+|3,0,8,1,17,0,1715114473,"# Ignore the Google Cloud service account key","cs510-project1-6c1b06b5846a.json","","# Ignore Python environment folder","myenv/","","# Ignore compiled Python files","*.pyc","","# Ignore log files and directories","*.log","logs/","","# Ignore data files that may contain sensitive or large data","*.csv","*.json",""
 "9	LINE	0
-	    blob = bucket.blob(filename)
-|3,0,9,1,1,0,1713463969,"    blob = bucket.blob(filename)"
+	TriMet__2024-04-11.json
+|3,0,9,1,1,0,1714623026,"TriMet__2024-04-11.json"
 "-	CHAR	0
 	'cs510-project1-6c1b06b5846a.json'
 |3,0,36,0,1,0,1713289532,"'cs510-project1-6c1b06b5846a.json'"
 
 # File marks:
-'0  4  36  ~/topic_clean.py
-|4,48,4,36,1713825062,"~/topic_clean.py"
-'1  18  28  ~/topic_clean.py
-|4,49,18,28,1713825027,"~/topic_clean.py"
-'2  18  28  ~/topic_clean.py
-|4,50,18,28,1713825027,"~/topic_clean.py"
-'3  42  8  ~/recieve_breadcrumb_messages.py
-|4,51,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
-'4  80  28  ~/recieve_breadcrumb_messages.py
-|4,52,80,28,1713822643,"~/recieve_breadcrumb_messages.py"
-'5  79  28  ~/recieve_breadcrumb_messages.py
-|4,53,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
-'6  24  0  ~/publish_breadcrumb_messages.py
-|4,54,24,0,1713822345,"~/publish_breadcrumb_messages.py"
-'7  80  4  ~/recieve_breadcrumb_messages.py
-|4,55,80,4,1713822288,"~/recieve_breadcrumb_messages.py"
-'8  79  4  ~/recieve_breadcrumb_messages.py
-|4,56,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
-'9  1  49  ~/recieve_breadcrumb_messages.py
-|4,57,1,49,1713821685,"~/recieve_breadcrumb_messages.py"
+'0  106  0  ~/from_bucket_to_database.py
+|4,48,106,0,1715116962,"~/from_bucket_to_database.py"
+'1  1  0  ~/uploaded_json_records.txt
+|4,49,1,0,1715116923,"~/uploaded_json_records.txt"
+'2  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,50,14,0,1715116743,"~/cs510-project1-6c1b06b5846a.json"
+'3  1  0  ~/uploaded_json_records.txt
+|4,51,1,0,1715116720,"~/uploaded_json_records.txt"
+'4  98  0  ~/from_bucket_to_database.py
+|4,52,98,0,1715116635,"~/from_bucket_to_database.py"
+'5  68  0  ~/from_bucket_to_database.py
+|4,53,68,0,1715116409,"~/from_bucket_to_database.py"
+'6  95  0  ~/from_bucket_to_database.py
+|4,54,95,0,1715116409,"~/from_bucket_to_database.py"
+'7  22  0  ~/.gitignore
+|4,55,22,0,1715114477,"~/.gitignore"
+'8  27  0  ~/cs510-project1-6c1b06b5846a.json
+|4,56,27,0,1715114312,"~/cs510-project1-6c1b06b5846a.json"
+'9  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,57,14,0,1715114312,"~/cs510-project1-6c1b06b5846a.json"
 
 # Jumplist (newest first):
--'  4  36  ~/topic_clean.py
-|4,39,4,36,1713825062,"~/topic_clean.py"
--'  18  28  ~/topic_clean.py
-|4,39,18,28,1713825036,"~/topic_clean.py"
--'  18  28  ~/topic_clean.py
-|4,39,18,28,1713825027,"~/topic_clean.py"
--'  19  85  ~/topic_clean.py
-|4,39,19,85,1713824951,"~/topic_clean.py"
--'  19  85  ~/topic_clean.py
-|4,39,19,85,1713824951,"~/topic_clean.py"
--'  42  8  ~/recieve_breadcrumb_messages.py
-|4,39,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
--'  42  8  ~/recieve_breadcrumb_messages.py
-|4,39,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
--'  42  8  ~/recieve_breadcrumb_messages.py
-|4,39,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
--'  42  8  ~/recieve_breadcrumb_messages.py
-|4,39,42,8,1713823647,"~/recieve_breadcrumb_messages.py"
--'  80  28  ~/recieve_breadcrumb_messages.py
-|4,39,80,28,1713823242,"~/recieve_breadcrumb_messages.py"
--'  80  28  ~/recieve_breadcrumb_messages.py
-|4,39,80,28,1713823242,"~/recieve_breadcrumb_messages.py"
--'  80  28  ~/recieve_breadcrumb_messages.py
-|4,39,80,28,1713823242,"~/recieve_breadcrumb_messages.py"
--'  80  28  ~/recieve_breadcrumb_messages.py
-|4,39,80,28,1713823242,"~/recieve_breadcrumb_messages.py"
--'  79  28  ~/recieve_breadcrumb_messages.py
-|4,39,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
--'  79  28  ~/recieve_breadcrumb_messages.py
-|4,39,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
--'  79  28  ~/recieve_breadcrumb_messages.py
-|4,39,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
--'  79  28  ~/recieve_breadcrumb_messages.py
-|4,39,79,28,1713822643,"~/recieve_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  24  0  ~/publish_breadcrumb_messages.py
-|4,39,24,0,1713822345,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  1  0  ~/publish_breadcrumb_messages.py
-|4,39,1,0,1713822316,"~/publish_breadcrumb_messages.py"
--'  79  4  ~/recieve_breadcrumb_messages.py
-|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
--'  79  4  ~/recieve_breadcrumb_messages.py
-|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
--'  79  4  ~/recieve_breadcrumb_messages.py
-|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
--'  79  4  ~/recieve_breadcrumb_messages.py
-|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
--'  79  4  ~/recieve_breadcrumb_messages.py
-|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
--'  79  4  ~/recieve_breadcrumb_messages.py
-|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
--'  79  4  ~/recieve_breadcrumb_messages.py
-|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
--'  79  4  ~/recieve_breadcrumb_messages.py
-|4,39,79,4,1713822288,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  1  0  ~/recieve_breadcrumb_messages.py
-|4,39,1,0,1713822183,"~/recieve_breadcrumb_messages.py"
--'  50  49  ~/recieve_breadcrumb_messages.py
-|4,39,50,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  50  49  ~/recieve_breadcrumb_messages.py
-|4,39,50,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  50  49  ~/recieve_breadcrumb_messages.py
-|4,39,50,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  50  49  ~/recieve_breadcrumb_messages.py
-|4,39,50,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  49  49  ~/recieve_breadcrumb_messages.py
-|4,39,49,49,1713821685,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
--'  37  89  ~/recieve_breadcrumb_messages.py
-|4,39,37,89,1713820810,"~/recieve_breadcrumb_messages.py"
+-'  106  0  ~/from_bucket_to_database.py
+|4,39,106,0,1715116962,"~/from_bucket_to_database.py"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1715116923,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1715116923,"~/uploaded_json_records.txt"
+-'  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,14,0,1715116743,"~/cs510-project1-6c1b06b5846a.json"
+-'  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,14,0,1715116743,"~/cs510-project1-6c1b06b5846a.json"
+-'  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,14,0,1715116743,"~/cs510-project1-6c1b06b5846a.json"
+-'  14  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,14,0,1715116743,"~/cs510-project1-6c1b06b5846a.json"
+-'  1  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,1,0,1715116733,"~/cs510-project1-6c1b06b5846a.json"
+-'  1  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,1,0,1715116733,"~/cs510-project1-6c1b06b5846a.json"
+-'  1  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,1,0,1715116733,"~/cs510-project1-6c1b06b5846a.json"
+-'  1  0  ~/cs510-project1-6c1b06b5846a.json
+|4,39,1,0,1715116733,"~/cs510-project1-6c1b06b5846a.json"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1715116720,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1715116720,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1715116720,"~/uploaded_json_records.txt"
+-'  1  0  ~/uploaded_json_records.txt
+|4,39,1,0,1715116720,"~/uploaded_json_records.txt"
+-'  98  0  ~/from_bucket_to_database.py
+|4,39,98,0,1715116635,"~/from_bucket_to_database.py"
+-'  98  0  ~/from_bucket_to_database.py
+|4,39,98,0,1715116635,"~/from_bucket_to_database.py"
+-'  98  0  ~/from_bucket_to_database.py
+|4,39,98,0,1715116635,"~/from_bucket_to_database.py"
+-'  98  0  ~/from_bucket_to_database.py
+|4,39,98,0,1715116635,"~/from_bucket_to_database.py"
+-'  98  0  ~/from_bucket_to_database.py
+|4,39,98,0,1715116635,"~/from_bucket_to_database.py"
+-'  98  0  ~/from_bucket_to_database.py
+|4,39,98,0,1715116635,"~/from_bucket_to_database.py"
+-'  98  0  ~/from_bucket_to_database.py
+|4,39,98,0,1715116635,"~/from_bucket_to_database.py"
+-'  98  0  ~/from_bucket_to_database.py
+|4,39,98,0,1715116635,"~/from_bucket_to_database.py"
+-'  68  0  ~/from_bucket_to_database.py
+|4,39,68,0,1715116409,"~/from_bucket_to_database.py"
+-'  95  0  ~/from_bucket_to_database.py
+|4,39,95,0,1715116409,"~/from_bucket_to_database.py"
+-'  95  0  ~/from_bucket_to_database.py
+|4,39,95,0,1715116409,"~/from_bucket_to_database.py"
+-'  95  0  ~/from_bucket_to_database.py
+|4,39,95,0,1715116409,"~/from_bucket_to_database.py"
+-'  95  0  ~/from_bucket_to_database.py
+|4,39,95,0,1715116409,"~/from_bucket_to_database.py"
+-'  95  0  ~/from_bucket_to_database.py
+|4,39,95,0,1715116409,"~/from_bucket_to_database.py"
+-'  95  0  ~/from_bucket_to_database.py
+|4,39,95,0,1715116409,"~/from_bucket_to_database.py"
+-'  95  0  ~/from_bucket_to_database.py
+|4,39,95,0,1715116409,"~/from_bucket_to_database.py"
+-'  95  0  ~/from_bucket_to_database.py
+|4,39,95,0,1715116409,"~/from_bucket_to_database.py"
+-'  118  0  ~/from_bucket_to_database.py
+|4,39,118,0,1715116352,"~/from_bucket_to_database.py"
+-'  115  0  ~/from_bucket_to_database.py
+|4,39,115,0,1715116352,"~/from_bucket_to_database.py"
+-'  110  0  ~/from_bucket_to_database.py
+|4,39,110,0,1715116352,"~/from_bucket_to_database.py"
+-'  107  0  ~/from_bucket_to_database.py
+|4,39,107,0,1715116352,"~/from_bucket_to_database.py"
+-'  110  0  ~/from_bucket_to_database.py
+|4,39,110,0,1715116352,"~/from_bucket_to_database.py"
+-'  107  0  ~/from_bucket_to_database.py
+|4,39,107,0,1715116352,"~/from_bucket_to_database.py"
+-'  110  0  ~/from_bucket_to_database.py
+|4,39,110,0,1715116352,"~/from_bucket_to_database.py"
+-'  107  0  ~/from_bucket_to_database.py
+|4,39,107,0,1715116352,"~/from_bucket_to_database.py"
+-'  110  0  ~/from_bucket_to_database.py
+|4,39,110,0,1715116352,"~/from_bucket_to_database.py"
+-'  107  0  ~/from_bucket_to_database.py
+|4,39,107,0,1715116352,"~/from_bucket_to_database.py"
+-'  110  0  ~/from_bucket_to_database.py
+|4,39,110,0,1715116352,"~/from_bucket_to_database.py"
+-'  107  0  ~/from_bucket_to_database.py
+|4,39,107,0,1715116352,"~/from_bucket_to_database.py"
+-'  110  0  ~/from_bucket_to_database.py
+|4,39,110,0,1715116352,"~/from_bucket_to_database.py"
+-'  107  0  ~/from_bucket_to_database.py
+|4,39,107,0,1715116352,"~/from_bucket_to_database.py"
+-'  110  0  ~/from_bucket_to_database.py
+|4,39,110,0,1715116352,"~/from_bucket_to_database.py"
+-'  107  0  ~/from_bucket_to_database.py
+|4,39,107,0,1715116352,"~/from_bucket_to_database.py"
+-'  110  0  ~/from_bucket_to_database.py
+|4,39,110,0,1715116352,"~/from_bucket_to_database.py"
+-'  107  0  ~/from_bucket_to_database.py
+|4,39,107,0,1715116352,"~/from_bucket_to_database.py"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
+-'  22  0  ~/.gitignore
+|4,39,22,0,1715114477,"~/.gitignore"
 
 # History of marks within files (newest to oldest):
+
+> ~/from_bucket_to_database.py
+	*	1715116961	0
+	"	106	0
+	^	105	0
+	.	105	0
+	+	1	39
+	+	1	13
+	+	1	47
+	+	1	14
+	+	1	0
+	+	1	38
+	+	1	0
+	+	1	33
+	+	1	13
+	+	1	0
+	+	1	63
+	+	1	0
+	+	1	40
+	+	1	68
+	+	1	20
+	+	1	0
+	+	1	62
+	+	1	40
+	+	117	39
+	+	106	0
+	+	106	45
+	+	106	0
+	+	68	40
+	+	105	0
+
+> ~/uploaded_json_records.txt
+	*	1715116922	0
+	"	1	0
+	.	1	0
+	+	1	0
+
+> ~/cs510-project1-6c1b06b5846a.json
+	*	1715116742	0
+	"	14	0
+	^	14	0
+	.	13	1
+	+	52	1
+	+	39	1
+	+	26	1
+	+	13	1
+
+> ~/.gitignore
+	*	1715114477	0
+	"	22	0
+	^	22	0
+	.	21	7
+	+	1	21
+	+	21	7
+
+> ~/breadcrumb_counter.py
+	*	1714621072	0
+	"	61	0
+	^	61	0
+	.	60	54
+	+	44	0
+	+	60	54
+
+> ~/database_uploader.py
+	*	1714619634	0
+	"	63	0
+	^	63	0
+	.	62	20
+	+	64	0
+	+	36	0
+	+	62	20
+
+> ~/from_messages_to_database.py
+	*	1714610173	0
+	"	57	0
+
+> ~/testing_breadcrumb_table.py
+	*	1714610059	0
+	"	30	0
 
 > ~/topic_clean.py
 	*	1713825062	0
@@ -642,13 +619,6 @@
 	*	1713808473	0
 	"	1	0
 
-> ~/.gitignore
-	*	1713536988	0
-	"	17	0
-	^	17	0
-	.	16	6
-	+	16	6
-
 > ~/cron_output.log
 	*	1713473229	0
 	"	838	0
@@ -729,10 +699,3 @@
 	+	22	0
 	+	19	25
 	+	20	77
-
-> ~/cs510-project1-6c1b06b5846a.json
-	*	1712956235	0
-	"	14	0
-	^	14	0
-	.	13	1
-	+	13	1

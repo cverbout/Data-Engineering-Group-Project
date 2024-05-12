@@ -1,17 +1,28 @@
-# Ignore the Google Cloud service account key
-cs510-project1-6c1b06b5846a.json
-
-# Ignore Python environment folder
+# Virtual environment
 myenv/
 
-# Ignore compiled Python files
-*.pyc
+# SSH directory
+.ssh/
 
-# Ignore log files and directories
+# Logs
 *.log
-logs/
 
-# Ignore data files that may contain sensitive or large data
+# CSV files
 *.csv
-*.json
 
+# JSON files - Ignore all except cs510-project1-6c1b06b5846a.json
+*.json
+!cs510-project1-6c1b06b5846a.json
+
+# Python cache files
+__pycache__/
+
+# Local configuration files
+.local/
+
+
+*.json
+cleaned_jsons/
+downloaded_jsons/
+*.log
+.cache/
