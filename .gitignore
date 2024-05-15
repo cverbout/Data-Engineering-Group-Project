@@ -26,3 +26,4 @@ cleaned_jsons/
 downloaded_jsons/
 *.log
 .cache/
+*cron_log*
