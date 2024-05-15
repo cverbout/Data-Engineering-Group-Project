@@ -64,7 +64,7 @@ if __name__ == "__main__":
         if TESTING:
             file_names = ["TriMet__2024-04-11.json"]
         else:
-            start_date = datetime(2024, 4, 12)
+            start_date = datetime(2024, 5, 13)
             end_date = datetime.now()
             file_names = generate_date_named_files(start_date, end_date)
 

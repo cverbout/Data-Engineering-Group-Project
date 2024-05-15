@@ -1,6 +1,7 @@
 import json
 import os
 import io
+import re
 import psycopg2
 from psycopg2 import pool
 from tqdm import tqdm
@@ -24,16 +25,25 @@ def connect_db():
 def close_db(conn):
     connection_pool.putconn(conn)
 
+def extract_integer_from_string(input_string):
+    # This regex matches the first sequence of digits in the input string
+    match = re.search(r'\d+', input_string)
+    if match:
+        return int(match.group())
+    else:
+        raise ValueError(f"No integer found in input: {input_string}")
+
 def insert_trip(trip_name):
     conn = connect_db()
     try:
+        trip_id_int = extract_integer_from_string(trip_name)
         with conn.cursor() as cursor:
             query = """
                 INSERT INTO stopevents_trips (trip_name)
                 VALUES (%s)
                 RETURNING trip_id
             """
-            cursor.execute(query, (trip_name,))
+            cursor.execute(query, (trip_id_int,))
             trip_id = cursor.fetchone()[0]
             conn.commit()
             if TESTING:
@@ -166,20 +176,23 @@ def process_json_files(directory):
                                 details = trip.get('data', [])
 
                                 if trip_name and isinstance(details, list):
-                                    trip_id = insert_trip(trip_name)
-                                    if trip_id is not None:
-                                        if TESTING:
-                                            details = details[:1]
-                                        
-                                        details_success = insert_stopevents_details(details, trip_id)
-                                        if details_success:
-                                            update_history(filepath)
+                                    try:
+                                        trip_id = insert_trip(trip_name)
+                                        if trip_id is not None:
+                                            if TESTING:
+                                                details = details[:1]
+                                            
+                                            details_success = insert_stopevents_details(details, trip_id)
+                                            if details_success:
+                                                update_history(filepath)
+                                            else:
+                                                print(f"Failed to insert stopevents details for file: {filename}")
+                                                break  # Exit if any insert fails to prevent further processing
                                         else:
-                                            print(f"Failed to insert stopevents details for file: {filename}")
+                                            print(f"Failed to insert trip for file: {filename}")
                                             break  # Exit if any insert fails to prevent further processing
-                                    else:
-                                        print(f"Failed to insert trip for file: {filename}")
-                                        break  # Exit if any insert fails to prevent further processing
+                                    except ValueError as e:
+                                        print(f"Error processing trip name '{trip_name}': {e}")
                                 else:
                                     print(f"Unexpected structure in trip_data: {trip}")
                         else:
