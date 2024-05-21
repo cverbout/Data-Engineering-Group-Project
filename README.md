@@ -13,6 +13,9 @@ This process ensures that JSON objects are downloaded from a bucket, cleaned, an
 3. **Upload JSON Objects to the Database:**
    - Run `python3 database_uploader.py` to upload the cleaned JSON objects to the database.
 
+4. **Upload JSON Objects for Stoptimes**
+   - Run `python3 database_stoptimes_uploader.py` to upload cleaned JSON objects to the database for the new tables.
+
 ## Notes
 
 - The scripts are designed to be idempotent; they track which JSON objects have been downloaded, cleaned, and uploaded, avoiding redundant work.
