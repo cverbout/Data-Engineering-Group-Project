@@ -5,6 +5,9 @@ from google.cloud import pubsub_v1
 import json
 import time
 from tqdm import tqdm
+from assertions import validate_data 
+from transformations import calculate_speed, decode_timestamp
+
 
 def get_vehicle_ids():
     doc_key = "10VKMye65LhbEgMLld5Ol3lOocWUwCaEgnPVgFQf9em0"
@@ -29,10 +32,23 @@ def publish_breadcrumbs():
         response = requests.get(url)
         if response.status_code == 200:
             breadcrumbs = response.json()
+            previous_breadcrumb = None
             for breadcrumb in breadcrumbs:
+                if previous_breadcrumb is not None:
+                    speed = calculate_speed(previous_breadcrumb, breadcrumb)
+                    breadcrumb['SPEED'] = speed
+                else:
+                    breadcrumb['SPEED'] = None
+
+                timestamp = decode_timestamp(breadcrumb) 
+                breadcrumb['TIMESTAMP'] = timestamp
+                validate_data(breadcrumb)
                 data_str = json.dumps(breadcrumb)
                 data_bytes = data_str.encode('utf-8')
                 publisher.publish(topic_path, data_bytes)
+                previous_breadcrumb = breadcrumb
+                #print statement for testing
+                # print(breadcrumb) 
         time.sleep(1)  # Respectful delay to avoid rate limiting
 
 if __name__ == "__main__":
