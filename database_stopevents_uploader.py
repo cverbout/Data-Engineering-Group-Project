@@ -146,6 +146,62 @@ def load_history():
     except FileNotFoundError:
         return set()
 
+def execute_sql_query():
+    sql_query = """
+    DROP TRIGGER IF EXISTS trip_update ON public.trip;
+    DROP FUNCTION IF EXISTS trip_update();
+
+    DROP VIEW IF EXISTS integratedtripdata;
+
+    CREATE OR REPLACE FUNCTION trip_update() RETURNS trigger AS $$
+    BEGIN
+       RAISE NOTICE 'Trip table has been updated';
+       RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    CREATE TRIGGER trip_update
+    AFTER UPDATE ON public.trip
+    FOR EACH ROW
+    EXECUTE FUNCTION trip_update();
+
+    CREATE OR REPLACE VIEW integratedtripdata AS
+    SELECT DISTINCT
+       b.trip_id AS trip_id,
+       CAST(s.route_number AS integer) AS route_id,
+       CAST(s.vehicle_number AS integer) AS vehicle_id,
+       CASE
+           WHEN s.service_key = 'U' THEN 'Sunday'
+           WHEN s.service_key = 'A' THEN 'Saturday'
+           ELSE 'Weekday'
+       END AS service_key,
+       CAST(s.direction AS BOOLEAN) AS direction
+    FROM BreadCrumb b
+    JOIN stopevents_trips AS st ON b.trip_id = st.trip_name
+    JOIN stopevents_details AS s ON st.trip_id = s.trip_id
+    WHERE s.service_key IN ('U', 'W', 'A');
+
+    UPDATE trip
+    SET
+       route_id = it.route_id,
+       vehicle_id = it.vehicle_id,
+       service_key = it.service_key,
+       direction = it.direction
+    FROM integratedtripdata AS it
+    WHERE trip.trip_id = it.trip_id;
+    """
+    conn = connect_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql_query)
+            conn.commit()
+            if TESTING:
+                print("Executed SQL for creating triggers and views.")
+    except psycopg2.Error as e:
+        print(f"Error executing SQL query: {e}")
+    finally:
+        close_db(conn)
+
 def process_json_files(directory):
     uploaded_files = load_history()
     files = os.listdir(directory)
@@ -202,7 +258,7 @@ def process_json_files(directory):
 
 def main():
     process_json_files('downloaded_stopevents_jsons')
-
+    execute_sql_query()
 if __name__ == "__main__":
     main()
 
