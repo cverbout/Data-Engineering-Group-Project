@@ -7,9 +7,9 @@ import psutil
 
 # Constants
 BUCKET_NAME = 'cs510-spring24-project1-bucket'
-FOLDER_NAME = 'data_via_direct_download'
+FOLDER_NAME = 'stopevents_data'
 BUCKET_CREDENTIALS_FILE = 'cs510-project1-6c1b06b5846a.json'
-LOCAL_DOWNLOAD_FOLDER = 'downloaded_jsons'
+LOCAL_DOWNLOAD_FOLDER = 'downloaded_stopevents_jsons'
 
 TESTING = False
 
@@ -20,7 +20,7 @@ def log_memory_usage():
     print(f"Memory used: {mem_info.rss / (1024 * 1024)} MB")
 
 
-def generate_date_named_files(start_date, end_date, prefix="TriMet__", suffix=".json"):
+def generate_date_named_files(start_date, end_date, prefix="TriMet_StopEvents__", suffix=".json"):
     date_list = []
     current_date = start_date
     while current_date <= end_date:
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     try:
         log_memory_usage()  # Log memory usage at the start
         if TESTING:
-            file_names = ["TriMet__2024-04-11.json"]
+            file_names = ["TriMet_StopEvents__2024-05-13.json"]
         else:
             start_date = datetime(2024, 5, 13)
             end_date = datetime.now()
